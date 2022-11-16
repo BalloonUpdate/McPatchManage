@@ -39,12 +39,13 @@ object McPatchManage
             println("4.还原所有文件修改")
             println("q.退出 (输入序号+Enter来进行你想要的操作)")
 
-            when(mcpatch.core.Input.readInputUntil("(\\d|q|ch)", "有效的选择"))
+            when(mcpatch.core.Input.readInputUntil("(\\d|q|ch|bv)", "有效的选择"))
             {
                 "1" -> CreateVersion().loop()
                 "2" -> ListVersion().loop()
                 "3" -> CheckStatus().loop()
                 "4" -> RevertWorkspace().loop()
+                "bv" -> BacktrackVersion().loop()
                 "ch" -> ClearHistory().loop()
                 "q" -> break
                 else -> break
@@ -54,6 +55,6 @@ object McPatchManage
         }
 
         println("结束运行")
-        Thread.sleep(1000)
+        Thread.sleep(1500)
     }
 }
