@@ -226,8 +226,8 @@ class CreateVersion
             versionMeta.oldFolders.addAll(diff.oldFolders)
             versionMeta.newFolders.addAll(diff.newFolders)
 
-            versionMeta.patchHash = HashUtils.sha1(patchFile.file)
-            versionMeta.patchLength = patchFile.length
+            versionMeta.patchHash = if (patchFile.exists) HashUtils.sha1(patchFile.file) else ""
+            versionMeta.patchLength = if (patchFile.exists) patchFile.length else 0
         }
 
         versionMeta.changeLogs = editor.get() ?: ""
