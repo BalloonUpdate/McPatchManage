@@ -97,7 +97,7 @@ class File2 : Iterable<File2>
             file.setLastModified(value)
         }
 
-    val files: List<File2> get() = file.listFiles().map { File2(it) }
+    val files: List<File2> get() = file.listFiles()?.map { File2(it) } ?: throw RuntimeException("failed to list the contents of the folder: $path")
 
     fun delete()
     {

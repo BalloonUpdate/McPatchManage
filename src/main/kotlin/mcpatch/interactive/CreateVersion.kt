@@ -25,6 +25,7 @@ import org.apache.tools.bzip2.CBZip2OutputStream
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import kotlin.math.max
 
 class CreateVersion
