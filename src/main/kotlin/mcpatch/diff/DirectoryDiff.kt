@@ -16,28 +16,28 @@ class DirectoryDiff
     var totalDiff: Int = 0
 
     /**
-     * 对比文件差异
-     * @param source 参照目录
-     * @param target 被对比目录
+     * 计算from目录同步到to目录之间的所有文件改动。from目录是参照目录，需要改动的是to目录
+     * @param from 参照目录
+     * @param to 目标目录
      * @return 有无差异
      */
-    fun compare(source: List<ComparableFile>, target: List<ComparableFile>): Boolean
+    fun compare(from: List<ComparableFile>, to: List<ComparableFile>): Boolean
     {
-        findNews(source, target)
-        findOlds(source, target)
+        findNews(from, to)
+        findOlds(from, to)
 
         totalDiff = oldFolders.size + oldFiles.size + newFolders.size + newFiles.size
         return totalDiff > 0
     }
 
     /** 扫描需要下载的文件(不包括被删除的)
-     * @param source 参照目录
-     * @param target 被对比目录
+     * @param from 参照目录
+     * @param to 目标目录
      */
-    private fun findNews(source: List<ComparableFile>, target: List<ComparableFile>) {
-        for (c in source)
+    private fun findNews(from: List<ComparableFile>, to: List<ComparableFile>) {
+        for (c in from)
         {
-            val corresponding = target.firstOrNull { it.name == c.name } // 此文件可能不存在
+            val corresponding = to.firstOrNull { it.name == c.name } // 此文件可能不存在
 
             if(corresponding == null) // 如果文件不存在的话，就不用校验了，可以直接进行下载
             {
@@ -71,14 +71,14 @@ class DirectoryDiff
     }
 
     /** 扫描需要删除的文件
-     * @param source 参照目录
-     * @param target 被对比目录
+     * @param from 参照目录
+     * @param to 目标目录
      */
-    private fun findOlds(source: List<ComparableFile>, target: List<ComparableFile>)
+    private fun findOlds(from: List<ComparableFile>, to: List<ComparableFile>)
     {
-        for (f in target)
+        for (f in to)
         {
-            val corresponding = source.firstOrNull { it.name == f.name }
+            val corresponding = from.firstOrNull { it.name == f.name }
 
             if(corresponding != null)
             {

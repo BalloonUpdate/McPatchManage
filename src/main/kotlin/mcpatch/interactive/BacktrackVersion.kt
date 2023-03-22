@@ -24,19 +24,19 @@ class BacktrackVersion
 {
     fun loop()
     {
-        println("即将回溯workspace目录和history目录下的内容")
+        println("即将还原workspace目录和history目录下的内容")
 
-        println("确定要回溯吗？（输入y或者n）")
+        println("确定要还原吗？（输入y或者n）")
         if (!mcpatch.core.Input.readYesOrNot(false))
         {
-            println("回溯过程中断")
+            println("还原过程中断")
             return
         }
 
         println("此操作不可逆转，请再次确认！（输入y或者n）")
         if (!mcpatch.core.Input.readYesOrNot(false))
         {
-            println("回溯过程中断")
+            println("还原过程中断")
             return
         }
 
@@ -54,13 +54,13 @@ class BacktrackVersion
 
             if (!metaFile.exists)
             {
-                println("${metaFile.path} 文件不存在，版本回溯失败")
+                println("${metaFile.path} 文件不存在，版本还原失败")
                 return
             }
 
             if (!patchFile.exists)
             {
-                println("${patchFile.path} 文件不存在，版本回溯失败")
+                println("${patchFile.path} 文件不存在，版本还原失败")
                 return
             }
 
@@ -74,17 +74,21 @@ class BacktrackVersion
             if (meta.newFiles.isNotEmpty())
                 if (!applyPatch(meta, version, backtrackDir, patchFile))
                 {
-                    println("回溯失败，请勿再进行任何操作，请将此错误报告给开发者")
+                    println("还原失败，请勿再进行任何操作，请将此错误报告给开发者")
                     return
                 }
         }
 
         // 同步workspace目录
-        println("正在回溯workspace目录")
+        println("正在还原workspace目录")
+
+        McPatchManage.workspaceDir.delete()
+        McPatchManage.workspaceDir.mkdirs()
+
         val workspace = RealFile.CreateFromRealFile(McPatchManage.workspaceDir)
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
-        diff.compare(workspace.files, history.files)
+        diff.compare(from = history.files, to = workspace.files)
         workspace.applyDiff(diff, historyDir)
     }
 

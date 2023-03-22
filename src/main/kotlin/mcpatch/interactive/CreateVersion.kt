@@ -46,6 +46,7 @@ class CreateVersion
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
         val hasDiff = diff.compare(workspace.files, history.files)
+
         val tempPatchFile = patchFile.parent + "patch-temporal.bin"
 
         if (hasDiff)
@@ -103,9 +104,10 @@ class CreateVersion
                             val new = workspaceDir + newFile
                             val newLen = if (new.exists) new.length else 0
                             val oldLen = if (old.exists) old.length else 0
+                            val case = old.name != new.name && old.name.equals(new.name, ignoreCase = true)
                             val mode = when {
                                 newLen == 0L -> ModificationMode.Empty
-                                oldLen == 0L && newLen > 0 -> ModificationMode.Fill
+                                (oldLen == 0L && newLen > 0) || case -> ModificationMode.Fill
                                 else -> ModificationMode.Modify
                             }
 
@@ -317,39 +319,44 @@ class CreateVersion
 
     fun loop()
     {
-        versionList.reload()
-        println("输入你要创建的版本号名称... ${versionList.getNewest3()}")
-        val newVersion = mcpatch.core.Input.readAnyString().trim()
+        val meta = File2("C:\\Users\\mooo\\Desktop\\1.2-r11.mc-patch.json")
+        val patch = File2("C:\\Users\\mooo\\Desktop\\1.2-r11.mc-patch.bin")
 
-        val metaFile = publicDir + "$newVersion.mc-patch.json"
-        val patchFile = publicDir + "$newVersion.mc-patch.bin"
+        validate("dev", meta, patch)
 
-        versionList.reload()
-
-        // 检查版本重复创建
-        if (newVersion in versionList)
-        {
-            println("版本 $newVersion 已经存在，不能重复创建")
-            return
-        }
-
-        // 打开更新记录编辑器
-        val changeLogsFile = workdir + "changelogs.txt"
-        val editor = ExternalTextFileEditor(changeLogsFile)
-        editor.open()
-
-        // 开始创建版本
-        val success = create(newVersion, metaFile, patchFile, editor)
-
-        if (success)
-        {
-            editor.close()
-            versionList.versions.add(newVersion)
-            versionList.save()
-        } else {
-//            metaFile.delete()
-//            patchFile.delete()
-            println("创建版本 $newVersion 失败！")
-        }
+//        versionList.reload()
+//        println("输入你要创建的版本号名称... ${versionList.getNewest3()}")
+//        val newVersion = mcpatch.core.Input.readAnyString().trim()
+//
+//        val metaFile = publicDir + "$newVersion.mc-patch.json"
+//        val patchFile = publicDir + "$newVersion.mc-patch.bin"
+//
+//        versionList.reload()
+//
+//        // 检查版本重复创建
+//        if (newVersion in versionList)
+//        {
+//            println("版本 $newVersion 已经存在，不能重复创建")
+//            return
+//        }
+//
+//        // 打开更新记录编辑器
+//        val changeLogsFile = workdir + "changelogs.txt"
+//        val editor = ExternalTextFileEditor(changeLogsFile)
+//        editor.open()
+//
+//        // 开始创建版本
+//        val success = create(newVersion, metaFile, patchFile, editor)
+//
+//        if (success)
+//        {
+//            editor.close()
+//            versionList.versions.add(newVersion)
+//            versionList.save()
+//        } else {
+////            metaFile.delete()
+////            patchFile.delete()
+//            println("创建版本 $newVersion 失败！")
+//        }
     }
 }

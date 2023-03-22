@@ -13,7 +13,7 @@ class RevertWorkspace
         val workspace = RealFile.CreateFromRealFile(workspaceDir)
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(workspace.files, history.files)
+        val hasDiff = diff.compare(history.files, workspace.files)
 
         if (hasDiff)
         {
@@ -25,7 +25,7 @@ class RevertWorkspace
             return
         }
 
-        println("确定要还原所有文件修改吗？（输入y或者n）")
+        println("确定要还原工作空间目录里所有的文件修改吗？（输入y或者n）")
         if (!mcpatch.core.Input.readYesOrNot(false))
         {
             println("还原文件修改过程中断")

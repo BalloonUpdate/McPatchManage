@@ -13,7 +13,7 @@ class CheckStatus
         val workspace = RealFile.CreateFromRealFile(workspaceDir)
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(workspace.files, history.files)
+        val hasDiff = diff.compare(from = workspace.files, to = history.files)
 
         if (hasDiff)
         {
