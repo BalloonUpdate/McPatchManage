@@ -319,44 +319,39 @@ class CreateVersion
 
     fun loop()
     {
-        val meta = File2("C:\\Users\\mooo\\Desktop\\1.2-r11.mc-patch.json")
-        val patch = File2("C:\\Users\\mooo\\Desktop\\1.2-r11.mc-patch.bin")
+        versionList.reload()
+        println("输入你要创建的版本号名称... ${versionList.getNewest3()}")
+        val newVersion = mcpatch.core.Input.readAnyString().trim()
 
-        validate("dev", meta, patch)
+        val metaFile = publicDir + "$newVersion.mc-patch.json"
+        val patchFile = publicDir + "$newVersion.mc-patch.bin"
 
-//        versionList.reload()
-//        println("输入你要创建的版本号名称... ${versionList.getNewest3()}")
-//        val newVersion = mcpatch.core.Input.readAnyString().trim()
-//
-//        val metaFile = publicDir + "$newVersion.mc-patch.json"
-//        val patchFile = publicDir + "$newVersion.mc-patch.bin"
-//
-//        versionList.reload()
-//
-//        // 检查版本重复创建
-//        if (newVersion in versionList)
-//        {
-//            println("版本 $newVersion 已经存在，不能重复创建")
-//            return
-//        }
-//
-//        // 打开更新记录编辑器
-//        val changeLogsFile = workdir + "changelogs.txt"
-//        val editor = ExternalTextFileEditor(changeLogsFile)
-//        editor.open()
-//
-//        // 开始创建版本
-//        val success = create(newVersion, metaFile, patchFile, editor)
-//
-//        if (success)
-//        {
-//            editor.close()
-//            versionList.versions.add(newVersion)
-//            versionList.save()
-//        } else {
-////            metaFile.delete()
-////            patchFile.delete()
-//            println("创建版本 $newVersion 失败！")
-//        }
+        versionList.reload()
+
+        // 检查版本重复创建
+        if (newVersion in versionList)
+        {
+            println("版本 $newVersion 已经存在，不能重复创建")
+            return
+        }
+
+        // 打开更新记录编辑器
+        val changeLogsFile = workdir + "changelogs.txt"
+        val editor = ExternalTextFileEditor(changeLogsFile)
+        editor.open()
+
+        // 开始创建版本
+        val success = create(newVersion, metaFile, patchFile, editor)
+
+        if (success)
+        {
+            editor.close()
+            versionList.versions.add(newVersion)
+            versionList.save()
+        } else {
+//            metaFile.delete()
+//            patchFile.delete()
+            println("创建版本 $newVersion 失败！")
+        }
     }
 }
