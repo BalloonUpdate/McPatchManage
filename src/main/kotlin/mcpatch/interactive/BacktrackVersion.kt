@@ -153,7 +153,7 @@ class BacktrackVersion
                         // 将修补好的文件输出到临时文件里
                         file.file.bufferedInputStream().use { old ->
                             tempBinFile.file.bufferedOutputStream().use { tempFile ->
-                                patch.skip(newFile.blockOffset - pointer)
+                                patch.actuallySkip(newFile.blockOffset - pointer)
 
                                 // 拿到解压好的原始数据
                                 ByteArrayOutputStream().use { decompressed ->
