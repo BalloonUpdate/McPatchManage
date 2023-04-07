@@ -20,6 +20,12 @@ class ExternalTextFileEditor(val file: File2) : AutoCloseable
         return content.replace("\r\n", "\n").replace("\r", "\n")
     }
 
+    fun clear()
+    {
+        file.delete()
+        file.create()
+    }
+
     fun open()
     {
         file.create()

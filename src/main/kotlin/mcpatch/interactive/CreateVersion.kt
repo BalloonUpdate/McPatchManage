@@ -1,12 +1,13 @@
 package mcpatch.interactive
 
 import com.lee.bsdiff.BsDiff
+import mcpatch.McPatchManage
 import mcpatch.editor.ExternalTextFileEditor
 import mcpatch.McPatchManage.historyDir
 import mcpatch.McPatchManage.publicDir
 import mcpatch.McPatchManage.versionList
-import mcpatch.McPatchManage.workdir
 import mcpatch.McPatchManage.workspaceDir
+import mcpatch.core.Input
 import mcpatch.data.ModificationMode
 import mcpatch.data.NewFile
 import mcpatch.data.VersionMetadata
@@ -25,7 +26,6 @@ import org.apache.tools.bzip2.CBZip2OutputStream
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.File
 import kotlin.math.max
 
 class CreateVersion
@@ -35,10 +35,11 @@ class CreateVersion
      * @param version 新版本名称
      * @param metaFile meta文件
      * @param patchFile patch文件
-     * @param editor 更新记录编辑器
+     * @param changelogs 更新记录编辑器
+     * @param overwroteFiles 强制更新文件编辑器
      * @return 是否创建成功
      */
-    private fun create(version: String, metaFile: File2, patchFile: File2, editor: ExternalTextFileEditor): Boolean
+    private fun create(version: String, metaFile: File2, patchFile: File2, changelogs: ExternalTextFileEditor, overwroteFiles: List<String>): Boolean
     {
         println("正在计算文件修改，可能需要一点时间")
 
@@ -52,7 +53,7 @@ class CreateVersion
         if (hasDiff)
         {
             println("----------以下为文件修改列表（共 ${diff.totalDiff} 处文件变动）----------")
-            println(diff)
+            println(diff.toString("旧目录", "新目录", "旧文件", "新文件", overwrittenFiles = overwroteFiles))
             println("----------以上为文件修改列表（共 ${diff.totalDiff} 处文件变动）----------")
         } else {
             println("注意，$version 是一个不包含任何更改的空版本")
@@ -77,7 +78,7 @@ class CreateVersion
         if (totalMemory > Runtime.getRuntime().maxMemory())
             println("可用内存不足，打包过程可能发生崩溃，请使用JVM参数Xmx调整最大可用内存")
 
-        if (!mcpatch.core.Input.readYesOrNot(false))
+        if (!Input.readYesOrNot(false))
         {
             println("创建版本 $version 过程中断")
             return false
@@ -106,6 +107,7 @@ class CreateVersion
                             val oldLen = if (old.exists) old.length else 0
                             val case = old.name != new.name && old.name.equals(new.name, ignoreCase = true)
                             val mode = when {
+                                newFile in overwroteFiles -> ModificationMode.Fill
                                 newLen == 0L -> ModificationMode.Empty
                                 (oldLen == 0L && newLen > 0) || case -> ModificationMode.Fill
                                 else -> ModificationMode.Modify
@@ -233,7 +235,7 @@ class CreateVersion
             versionMeta.patchLength = if (patchFile.exists) patchFile.length else 0
         }
 
-        versionMeta.changeLogs = editor.get() ?: ""
+        versionMeta.changeLogs = changelogs.get() ?: ""
         metaFile.content = versionMeta.serializeToJson().toString(4)
 
         val isValid = !patchFile.exists || validate(version, metaFile, patchFile)
@@ -317,11 +319,11 @@ class CreateVersion
         return true
     }
 
-    fun loop()
+    fun loop(overwrittenFiles: List<String>)
     {
         versionList.reload()
         println("输入你要创建的版本号名称... ${versionList.getNewest3()}")
-        val newVersion = mcpatch.core.Input.readAnyString().trim()
+        val newVersion = Input.readAnyString().trim()
 
         val metaFile = publicDir + "$newVersion.mc-patch.json"
         val patchFile = publicDir + "$newVersion.mc-patch.bin"
@@ -335,17 +337,15 @@ class CreateVersion
             return
         }
 
-        // 打开更新记录编辑器
-        val changeLogsFile = workdir + "changelogs.txt"
-        val editor = ExternalTextFileEditor(changeLogsFile)
-        editor.open()
+        val changelogsEditor = ExternalTextFileEditor(McPatchManage.workdir + "changelogs.txt")
+        changelogsEditor.open()
 
         // 开始创建版本
-        val success = create(newVersion, metaFile, patchFile, editor)
+        val success = create(newVersion, metaFile, patchFile, changelogsEditor, overwrittenFiles)
 
         if (success)
         {
-            editor.close()
+            changelogsEditor.close()
             versionList.versions.add(newVersion)
             versionList.save()
         } else {

@@ -151,7 +151,8 @@ class DirectoryDiff
         newFolder: String,
         oldFile: String,
         newFile: String,
-        lineSeparator: String = "\n"
+        lineSeparator: String = "\n",
+        overwrittenFiles: List<String> = listOf()
     ): String {
         return buildString {
             for (f in oldFolders)
@@ -173,7 +174,7 @@ class DirectoryDiff
                 append(lineSeparator)
 
             for (f in newFiles)
-                append("$newFile: $f\n")
+                append("$newFile: $f${ if (f in overwrittenFiles) " (强制更新)" else "" }\n")
         }.trim()
     }
 

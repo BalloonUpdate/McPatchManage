@@ -34,7 +34,7 @@ object Input
     {
         while (true)
         {
-            val input = mcpatch.core.Input.readInput(reg)
+            val input = readInput(reg)
 
             if (input.first)
                 return input.second
@@ -49,7 +49,7 @@ object Input
      */
     fun readAnyString(): String
     {
-        return mcpatch.core.Input.readInputUntil(".+", "")
+        return readInputUntil(".*", "")
     }
 
     /**
@@ -57,7 +57,7 @@ object Input
      */
     fun waitForEnterPress()
     {
-        mcpatch.core.Input.readInput("")
+        readInput("")
     }
 
     /**
@@ -67,7 +67,7 @@ object Input
      */
     fun readYesOrNot(default: Boolean): Boolean
     {
-        val (result, input) = mcpatch.core.Input.readInput("[yYnN]?")
+        val (result, input) = readInput("[yYnN]?")
 
         if (!result)
             return default

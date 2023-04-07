@@ -1,11 +1,12 @@
 package mcpatch
 
+import mcpatch.core.Input
 import mcpatch.core.VersionList
+import mcpatch.editor.ExternalTextFileEditor
 import mcpatch.extension.RuntimeExtension.usedMemory
 import mcpatch.interactive.*
 import mcpatch.utils.EnvironmentUtils
 import mcpatch.utils.File2
-import mcpatch.utils.HashUtils
 import mcpatch.utils.MiscUtils
 
 object McPatchManage
@@ -39,11 +40,15 @@ object McPatchManage
             println("4.还原所有文件修改")
             println("q.退出 (输入序号+Enter来进行你想要的操作)")
 
-            when(mcpatch.core.Input.readInputUntil("(\\d|q|ch|bv)", "有效的选择"))
+            val overwrittenEditor = ExternalTextFileEditor(workdir + "overwirtes.txt")
+            overwrittenEditor.open()
+            val overwrittenFiles = (overwrittenEditor.get()?.split("\r\n", "\n", "\r") ?: listOf()).map { it.trim() }
+
+            when(Input.readInputUntil("(\\d|q|ch|bv)", "有效的选择"))
             {
-                "1" -> CreateVersion().loop()
+                "1" -> CreateVersion().loop(overwrittenFiles)
                 "2" -> ListVersion().loop()
-                "3" -> CheckStatus().loop()
+                "3" -> CheckStatus().loop(overwrittenFiles)
                 "4" -> RevertWorkspace().loop()
                 "bv" -> BacktrackVersion().loop()
                 "ch" -> ClearHistory().loop()
@@ -52,6 +57,7 @@ object McPatchManage
             }
 
             System.gc()
+            Input.readAnyString()
         }
 
         println("结束运行")
