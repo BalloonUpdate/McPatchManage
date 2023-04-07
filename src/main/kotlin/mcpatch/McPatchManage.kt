@@ -2,12 +2,10 @@ package mcpatch
 
 import mcpatch.core.Input
 import mcpatch.core.VersionList
-import mcpatch.editor.ExternalTextFileEditor
-import mcpatch.extension.RuntimeExtension.usedMemory
+import mcpatch.exception.McPatchManagerException
 import mcpatch.interactive.*
 import mcpatch.utils.EnvironmentUtils
 import mcpatch.utils.File2
-import mcpatch.utils.MiscUtils
 
 object McPatchManage
 {
@@ -15,7 +13,7 @@ object McPatchManage
     val workspaceDir = workdir + "workspace"
     val historyDir = workdir + "history"
     val publicDir = workdir + "public"
-    val versionList = VersionList(workdir + "public/mc-patch-versions.txt")
+    val versionList = VersionList(workdir + "public/versions.txt")
 
     @JvmStatic
     fun main(args: Array<String>)
@@ -28,32 +26,38 @@ object McPatchManage
 
         while (true)
         {
-            versionList.reload()
+            println("主菜单: (输入字母执行命令)")
+            println("  c: 创建新版本 (最新版本为 ${versionList.getNewest()} )")
+            println("  t: 验证所有版本文件")
+            println("  q: 退出")
+            println("  restore: 还原工作空间目录(workspace)的修改")
+            println("  revert: 还原历史目录(history)的修改")
+            println("  clear: 清除所有数据恢复到最干净的状态")
+            print("> ")
+            System.out.flush()
 
-            val ramUsed = MiscUtils.convertBytes(Runtime.getRuntime().usedMemory())
-            val ramTotal = MiscUtils.convertBytes(Runtime.getRuntime().maxMemory())
-
-            println("====================主菜单====================")
-            println("1.创建新版本（RAM： $ramUsed / $ramTotal）")
-            println("2.查看所有版本号（最新三个版本为: ${versionList.getNewest3()}）")
-            println("3.检查文件修改状态")
-            println("4.还原所有文件修改")
-            println("q.退出 (输入序号+Enter来进行你想要的操作)")
-
-            val overwrittenEditor = ExternalTextFileEditor(workdir + "overwirtes.txt")
-            overwrittenEditor.open()
-            val overwrittenFiles = (overwrittenEditor.get()?.split("\r\n", "\n", "\r") ?: listOf()).map { it.trim() }
-
-            when(Input.readInputUntil("(\\d|q|ch|bv)", "有效的选择"))
-            {
-                "1" -> CreateVersion().loop(overwrittenFiles)
-                "2" -> ListVersion().loop()
-                "3" -> CheckStatus().loop(overwrittenFiles)
-                "4" -> RevertWorkspace().loop()
-                "bv" -> BacktrackVersion().loop()
-                "ch" -> ClearHistory().loop()
-                "q" -> break
-                else -> break
+            try {
+                when(val input = Input.readAnyString())
+                {
+                    "c" -> Create().loop()
+                    "t" -> Test().loop()
+                    "restore" -> Restore().loop()
+                    "revert" -> Revert().loop()
+                    "clear" -> Clear().loop()
+                    "q" -> break
+                    else -> {
+                        if (input.isNotEmpty())
+                        {
+                            println("$input 不是一个命令")
+                            Input.readAnyString()
+                        } else {
+                            println()
+                        }
+                        continue
+                    }
+                }
+            } catch (e: McPatchManagerException) {
+                println(e.message)
             }
 
             System.gc()

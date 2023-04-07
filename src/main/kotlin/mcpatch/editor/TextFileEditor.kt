@@ -2,7 +2,7 @@ package mcpatch.editor
 
 import mcpatch.utils.File2
 
-class ExternalTextFileEditor(val file: File2) : AutoCloseable
+class TextFileEditor(val file: File2) : AutoCloseable
 {
     /**
      * 获取文件内容

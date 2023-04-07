@@ -174,7 +174,7 @@ class DirectoryDiff
                 append(lineSeparator)
 
             for (f in newFiles)
-                append("$newFile: $f${ if (f in overwrittenFiles) " (强制更新)" else "" }\n")
+                append("$newFile: $f\n")
         }.trim()
     }
 

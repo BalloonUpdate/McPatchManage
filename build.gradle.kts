@@ -22,6 +22,7 @@ dependencies {
     implementation(files("libs/apache-ant-1.10.12.jar"))
     implementation("org.json:json:20220924")
     implementation(kotlin("stdlib-jdk8"))
+    implementation("org.apache.commons:commons-compress:1.23.0")
 }
 
 tasks.withType<KotlinCompile> {

@@ -49,7 +49,7 @@ object Input
      */
     fun readAnyString(): String
     {
-        return readInputUntil(".*", "")
+        return readInputUntil(".*", "").trim()
     }
 
     /**
