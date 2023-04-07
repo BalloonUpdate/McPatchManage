@@ -48,7 +48,7 @@ class Revert
                 println("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.newFile.path}")
 
                 val file = historyDir + entry.newFile.path
-                entry.read(file.file.bufferedOutputStream())
+                file.file.bufferedOutputStream().use { stream -> entry.read(stream) }
             }
         }
 

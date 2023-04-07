@@ -27,7 +27,7 @@ class Restore
             return
         }
 
-        println("即将还原工作空间(workspace)目录里的所有文件修改")
+        println("即将还原工作空间目录(workspace)里的所有文件修改")
         println("要继续吗？（输入y或者n）")
 
         if (!mcpatch.core.Input.readYesOrNot(false))

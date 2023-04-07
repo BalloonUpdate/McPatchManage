@@ -31,11 +31,6 @@ data class NewFile(
      */
     val bzippedHash: String,
 
-//    /**
-//     * 数据bzipped后的长度
-//     */
-//    val bzippedLength: Long,
-
     /**
      * 数据完全解压后的hash
      */
@@ -55,7 +50,6 @@ data class NewFile(
         jo.put("old-hash", oldHash)
         jo.put("new-hash", newHash)
         jo.put("bzipped-hash", bzippedHash)
-//        jo.put("bzipped-length", bzippedLength)
         jo.put("raw-hash", rawHash)
         jo.put("raw-length", rawLength)
 
@@ -71,7 +65,6 @@ data class NewFile(
                 oldHash = jo.getString("old-hash"),
                 newHash = jo.getString("new-hash"),
                 bzippedHash = jo.getString("bzipped-hash"),
-//                bzippedLength = jo.getLong("bzipped-length"),
                 rawHash = jo.getString("raw-hash"),
                 rawLength = jo.getLong("raw-length"),
             )

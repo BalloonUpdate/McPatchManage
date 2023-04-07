@@ -13,6 +13,7 @@ object McPatchManage
     val workspaceDir = workdir + "workspace"
     val historyDir = workdir + "history"
     val publicDir = workdir + "public"
+    val combineDir = workdir + "combining"
     val versionList = VersionList(workdir + "public/versions.txt")
 
     @JvmStatic
@@ -29,10 +30,8 @@ object McPatchManage
             println("主菜单: (输入字母执行命令)")
             println("  c: 创建新版本 (最新版本为 ${versionList.getNewest()} )")
             println("  t: 验证所有版本文件")
+            println("  ?: 查看隐藏指令")
             println("  q: 退出")
-            println("  restore: 还原工作空间目录(workspace)的修改")
-            println("  revert: 还原历史目录(history)的修改")
-            println("  clear: 清除所有数据恢复到最干净的状态")
             print("> ")
             System.out.flush()
 
@@ -41,6 +40,14 @@ object McPatchManage
                 {
                     "c" -> Create().loop()
                     "t" -> Test().loop()
+                    "?" -> {
+                        println("隐藏指令：")
+                        println("  combine: 合并历史更新包")
+                        println("  restore: 还原工作空间目录(workspace)的修改")
+                        println("  revert: 还原历史目录(history)的修改")
+                        println("  clear: 删除所有历史版本")
+                    }
+                    "combine" -> Combine().loop()
                     "restore" -> Restore().loop()
                     "revert" -> Revert().loop()
                     "clear" -> Clear().loop()

@@ -31,6 +31,11 @@ class TextFileEditor(val file: File2) : AutoCloseable
         file.create()
     }
 
+    fun write(text: String)
+    {
+        file.content = text
+    }
+
     override fun close()
     {
         file.delete()

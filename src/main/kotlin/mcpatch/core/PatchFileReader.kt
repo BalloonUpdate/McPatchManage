@@ -49,8 +49,13 @@ class PatchFileReader(val version: String, val file: File2) : Iterable<PatchFile
 
     class PatchEntry(private val reader: PatchFileReader, val newFile: NewFile)
     {
+        val mode = newFile.mode
+
         fun read(output: OutputStream)
         {
+            if (mode == ModificationMode.Empty)
+                return
+
             val entry = reader.archive.getEntry(newFile.path) ?: throw McPatchManagerException("[${reader.version}] 找不到文件数据: $newFile")
 
             reader.archive.getInputStream(entry).use { stream ->
@@ -74,7 +79,7 @@ class PatchFileReader(val version: String, val file: File2) : Iterable<PatchFile
                             bzip.copyAmountTo(raw, 128 * 1024, newFile.rawLength)
 
                             if (HashUtils.sha1(raw.toByteArray()) != newFile.rawHash)
-                                throw McPatchManagerException("[${reader.version}] 更新包中 ${newFile.path} 文件的数据（解压缩后）无法通过验证")
+                                throw McPatchManagerException("[${reader.version}] 更新包中 ${newFile.path} 文件的数据（unbzipped）无法通过验证")
 
                             output.write(raw.toByteArray())
                         }
