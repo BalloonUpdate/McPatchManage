@@ -65,7 +65,8 @@ class Combine
                 println("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.newFile.path}")
 
                 val file = workspace + entry.newFile.path
-                file.file.bufferedOutputStream().use { stream -> entry.read(stream) }
+
+                file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
             }
         }
 

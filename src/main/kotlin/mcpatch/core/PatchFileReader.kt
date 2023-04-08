@@ -5,13 +5,15 @@ import mcpatch.data.NewFile
 import mcpatch.data.VersionData
 import mcpatch.exception.McPatchManagerException
 import mcpatch.extension.StreamExtension.copyAmountTo
+import mcpatch.stream.ActionedInputStream
+import mcpatch.stream.EmptyInputStream
+import mcpatch.stream.SHA1CheckInputStream
 import mcpatch.utils.File2
-import mcpatch.utils.HashUtils
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.tools.bzip2.CBZip2InputStream
 import org.json.JSONObject
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.io.OutputStream
 
 class PatchFileReader(val version: String, val file: File2) : Iterable<PatchFileReader.PatchEntry>, AutoCloseable
@@ -24,7 +26,7 @@ class PatchFileReader(val version: String, val file: File2) : Iterable<PatchFile
         val metaEntry = archive.getEntry(".mcpatch-meta.json") ?: throw McPatchManagerException("找不到更新包的元数据")
         val metaSize = metaEntry.size.toInt()
         val metaBuf = ByteArrayOutputStream(metaSize)
-        archive.getInputStream(metaEntry).use { it.copyAmountTo(metaBuf, 4 * 1024, metaSize.toLong()) }
+        archive.getInputStream(metaEntry).use { it.copyAmountTo(metaBuf, metaSize.toLong()) }
         meta = VersionData(JSONObject(metaBuf.toByteArray().decodeToString()))
     }
 
@@ -51,41 +53,35 @@ class PatchFileReader(val version: String, val file: File2) : Iterable<PatchFile
     {
         val mode = newFile.mode
 
-        fun read(output: OutputStream)
+        fun hasData(): Boolean
         {
-            if (mode == ModificationMode.Empty)
-                return
+            return mode == ModificationMode.Modify || mode == ModificationMode.Fill
+        }
+
+        fun getInputStream(): InputStream
+        {
+            if (!hasData())
+                return EmptyInputStream()
 
             val entry = reader.archive.getEntry(newFile.path) ?: throw McPatchManagerException("[${reader.version}] 找不到文件数据: $newFile")
 
-            reader.archive.getInputStream(entry).use { stream ->
-                if (newFile.mode != ModificationMode.Modify && newFile.mode != ModificationMode.Fill)
-                    return
+            val entryStream = reader.archive.getInputStream(entry)
+            val bzipped = SHA1CheckInputStream(entryStream)
+            val unbzipped = SHA1CheckInputStream(CBZip2InputStream(bzipped))
 
-                ByteArrayOutputStream().use { temp ->
-                    // 提取bzipped数据
-                    temp.reset()
-                    stream.copyAmountTo(temp, 128 * 1024, entry.size)
+            return ActionedInputStream(unbzipped, newFile.rawLength.toInt()) {
+                if (bzipped.digest() != newFile.bzippedHash)
+                    throw McPatchManagerException("[${reader.version}] 更新包中 ${newFile.path} 文件的数据（bzipped）无法通过验证")
 
-                    // 检查bzipped数据
-                    val bzipped = temp.toByteArray()
-                    if (HashUtils.sha1(bzipped) != newFile.bzippedHash)
-                        throw McPatchManagerException("[${reader.version}] 更新包中 ${newFile.path} 文件的数据（bzipped）无法通过验证")
-
-                    // 检查raw数据
-                    ByteArrayInputStream(bzipped).use { bzippedInput ->
-                        ByteArrayOutputStream().use { raw ->
-                            val bzip = CBZip2InputStream(bzippedInput)
-                            bzip.copyAmountTo(raw, 128 * 1024, newFile.rawLength)
-
-                            if (HashUtils.sha1(raw.toByteArray()) != newFile.rawHash)
-                                throw McPatchManagerException("[${reader.version}] 更新包中 ${newFile.path} 文件的数据（unbzipped）无法通过验证")
-
-                            output.write(raw.toByteArray())
-                        }
-                    }
-                }
+                if (unbzipped.digest() != newFile.rawHash)
+                    throw McPatchManagerException("[${reader.version}] 更新包中 ${newFile.path} 文件的数据（unbzipped）无法通过验证")
             }
+        }
+
+        fun copyTo(output: OutputStream)
+        {
+            val input = getInputStream()
+            input.copyAmountTo(output, newFile.rawLength)
         }
     }
 }

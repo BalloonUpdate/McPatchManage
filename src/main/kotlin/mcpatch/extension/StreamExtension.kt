@@ -25,8 +25,8 @@ object StreamExtension
 
     fun InputStream.copyAmountTo(
         out: OutputStream,
-        buffer: Int,
         amount: Long,
+        buffer: Int = 128 * 1024,
         callback: ((copied: Long, total: Long) -> Unit)? = null
     ): Long {
         var bytesCopied: Long = 0

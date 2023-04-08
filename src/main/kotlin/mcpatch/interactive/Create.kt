@@ -62,7 +62,7 @@ class Create
                     val rawLength: Long
                     val rawHash: String
                     ByteArrayOutputStream().use { temp ->
-                        rawLength = stream.copyAmountTo(temp, 128 * 1024, stream.available().toLong())
+                        rawLength = stream.copyAmountTo(temp, stream.available().toLong())
                         rawHash = HashUtils.sha1(temp.toByteArray())
                         temp.writeTo(bzip)
                     }
@@ -260,7 +260,7 @@ class Create
                 {
                     println("验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.newFile.path}")
                     buf.reset()
-                    entry.read(buf)
+                    entry.copyTo(buf)
                 }
             }
         } catch (e: McPatchManagerException) {

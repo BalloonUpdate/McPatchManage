@@ -29,7 +29,7 @@ class Test
                 println("[$version] 验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.newFile.path}")
 
                 buf.reset()
-                entry.read(buf)
+                entry.copyTo(buf)
             }
         }
 

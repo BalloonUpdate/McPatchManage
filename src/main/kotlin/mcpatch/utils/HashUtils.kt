@@ -103,8 +103,7 @@ object HashUtils
      * @param size 文件大小
      * @return 缓冲区大小
      */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun chooseBufferSize(size: Long): Int {
+    fun chooseBufferSize(size: Long): Int {
         val kb = 1024
         val mb = 1024 * 1024
         val gb = 1024 * 1024 * 1024
