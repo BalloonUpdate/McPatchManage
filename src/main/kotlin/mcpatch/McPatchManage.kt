@@ -6,6 +6,7 @@ import mcpatch.exception.McPatchManagerException
 import mcpatch.interactive.*
 import mcpatch.utils.EnvironmentUtils
 import mcpatch.utils.File2
+import kotlin.system.exitProcess
 
 object McPatchManage
 {
@@ -19,6 +20,7 @@ object McPatchManage
     @JvmStatic
     fun main(args: Array<String>)
     {
+        var exitCode = 0
         val interactiveMode = args.isEmpty()
 
         historyDir.mkdirs()
@@ -67,7 +69,9 @@ object McPatchManage
                         continue
                     }
                 }
+                exitCode = 0
             } catch (e: McPatchManagerException) {
+                exitCode = 1
                 println(e.message)
             }
 
@@ -79,5 +83,6 @@ object McPatchManage
 
         println("结束运行")
         Thread.sleep(1500)
+        exitProcess(exitCode)
     }
 }
