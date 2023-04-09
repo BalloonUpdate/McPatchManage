@@ -301,7 +301,7 @@ class Create
         println("创建版本 $version 完成，耗时 ${elapse.toFloat() / 1000} 秒")
     }
 
-    fun execute()
+    fun execute(versionSpecified: String? = null)
     {
         val changelogs = TextFileEditor(McPatchManage.workdir + "changelogs.txt")
 
@@ -311,7 +311,8 @@ class Create
             McPatchManage.publicDir,
             false,
             McPatchManage.versionList,
-            changelogs, null
+            changelogs,
+            versionSpecified
         )
     }
 }

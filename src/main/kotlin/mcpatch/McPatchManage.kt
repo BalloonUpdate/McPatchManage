@@ -19,13 +19,15 @@ object McPatchManage
     @JvmStatic
     fun main(args: Array<String>)
     {
+        val interactiveMode = args.isEmpty()
+
         historyDir.mkdirs()
         workspaceDir.mkdirs()
         publicDir.mkdirs()
 
         println("McPatchManage v${EnvironmentUtils.version}")
 
-        while (true)
+        do
         {
             println("主菜单: (输入字母执行命令)")
             println("  c: 创建新版本 (最新版本为 ${versionList.getNewest()} )")
@@ -36,9 +38,9 @@ object McPatchManage
             System.out.flush()
 
             try {
-                when(val input = Input.readAnyString())
+                when(val input = if (!interactiveMode) args[0] else Input.readAnyString())
                 {
-                    "c" -> Create().execute()
+                    "c" -> Create().execute(if (args.size >= 2) args[1] else "")
                     "t" -> Test().execute()
                     "?" -> {
                         println("隐藏指令：")
@@ -56,10 +58,12 @@ object McPatchManage
                         if (input.isNotEmpty())
                         {
                             println("$input 不是一个命令")
-                            Input.readAnyString()
+                            if (interactiveMode)
+                                Input.readAnyString()
                         } else {
                             println()
                         }
+
                         continue
                     }
                 }
@@ -68,8 +72,10 @@ object McPatchManage
             }
 
             System.gc()
-            Input.readAnyString()
-        }
+
+            if (interactiveMode)
+                Input.readAnyString()
+        } while (interactiveMode)
 
         println("结束运行")
         Thread.sleep(1500)
