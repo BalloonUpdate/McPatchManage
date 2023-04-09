@@ -99,6 +99,18 @@ object HashUtils
     }
 
     /**
+     * 计算data的的crc32
+     * @param data 要计算的数据
+     * @return Long格式的crc32
+     */
+    fun crc32(data: ByteArray): Long
+    {
+        val crc32 = CRC32()
+        crc32.update(data)
+        return crc32.value
+    }
+
+    /**
      * 根据文件大小选择合适的缓冲区大小
      * @param size 文件大小
      * @return 缓冲区大小

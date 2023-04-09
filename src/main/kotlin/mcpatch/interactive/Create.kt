@@ -17,11 +17,13 @@ import mcpatch.extension.FileExtension.bufferedInputStream
 import mcpatch.extension.FileExtension.bufferedOutputStream
 import mcpatch.extension.RuntimeExtension.usedMemory
 import mcpatch.extension.StreamExtension.copyAmountTo
+import mcpatch.stream.MemoryOutputStream
 import mcpatch.utils.File2
 import mcpatch.utils.HashUtils
 import mcpatch.utils.MiscUtils
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
+import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.tools.bzip2.CBZip2OutputStream
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
@@ -32,7 +34,7 @@ class Create
         workspaceD: File2,
         historyD: File2,
         diff: DirectoryDiff,
-        sharedBuf: ByteArrayOutputStream,
+        sharedBuf: MemoryOutputStream,
         output: ZipArchiveOutputStream,
         index: Int,
         newFile: String
@@ -42,9 +44,11 @@ class Create
         val newLen = if (new.exists) new.length else 0
         val oldLen = if (old.exists) old.length else 0
         val case = old.name != new.name && old.name.equals(new.name, ignoreCase = true)
+        val isZip = (newLen > 0 && oldLen > 0 && old.name.endsWith(".jar") || old.name.endsWith(".zip") && new.name.endsWith(".jar") || new.name.endsWith(".zip"))
         val mode = when {
             newLen == 0L -> ModificationMode.Empty
             (oldLen == 0L && newLen > 0) || case -> ModificationMode.Fill
+            isZip -> ModificationMode.ZipModify
             else -> ModificationMode.Modify
         }
 
@@ -73,6 +77,7 @@ class Create
                     // 写出数据
                     val entry = ZipArchiveEntry(newFile)
                     entry.size = sharedBuf.size().toLong()
+                    entry.crc = sharedBuf.crc32()
                     output.putArchiveEntry(entry)
                     sharedBuf.writeTo(output)
                     output.closeArchiveEntry()
@@ -112,6 +117,7 @@ class Create
                         // 写出数据
                         val entry = ZipArchiveEntry(newFile)
                         entry.size = sharedBuf.size().toLong()
+                        entry.crc = sharedBuf.crc32()
                         output.putArchiveEntry(entry)
                         sharedBuf.writeTo(output)
                         output.closeArchiveEntry()
@@ -125,6 +131,16 @@ class Create
                             rawHash = rawHash,
                             rawLength = rawLength
                         )
+                    }
+                }
+            }
+
+            ModificationMode.ZipModify -> {
+                ZipFile(old.file, "utf-8").use { zipO ->
+                    ZipFile(new.file, "utf-8").use { zipN ->
+                        val diff = DirectoryDiff()
+                        diff.compare()
+
                     }
                 }
             }
@@ -213,6 +229,7 @@ class Create
         tempPatchFile.file.bufferedOutputStream(8 * 1024 * 1024).use { tempFile2 ->
             val archive = ZipArchiveOutputStream(tempFile2)
             archive.encoding = "utf-8"
+            archive.setMethod(ZipArchiveOutputStream.STORED)
 
             val versionMeta = VersionData()
 
@@ -225,7 +242,7 @@ class Create
             // 写出文件更新数据
             if (diff.missingFiles.isNotEmpty())
             {
-                ByteArrayOutputStream().use { sharedBuf ->
+                MemoryOutputStream().use { sharedBuf ->
                     for ((index, newFile) in diff.missingFiles.withIndex())
                     {
                         sharedBuf.reset()
@@ -245,6 +262,7 @@ class Create
             val bytes = versionMeta.serializeToJson().toString(4).encodeToByteArray()
             val entry = ZipArchiveEntry(".mcpatch-meta.json")
             entry.size = bytes.size.toLong()
+            entry.crc = HashUtils.crc32(bytes)
             archive.putArchiveEntry(entry)
             archive.write(bytes)
             archive.closeArchiveEntry()

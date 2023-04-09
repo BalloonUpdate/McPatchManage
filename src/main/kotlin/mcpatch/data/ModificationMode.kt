@@ -4,7 +4,8 @@ enum class ModificationMode(val flag: String)
 {
     Empty("e"),
     Fill("f"),
-    Modify("m");
+    Modify("m"),
+    ZipModify("z");
 
     override fun toString() = flag
 
@@ -16,6 +17,7 @@ enum class ModificationMode(val flag: String)
                 "e" -> Empty
                 "f" -> Fill
                 "m" -> Modify
+                "z" -> ZipModify
                 else -> throw ClassCastException("The value '$flag' is not one of members of ModificationMode")
             }
         }
