@@ -10,7 +10,7 @@ import mcpatch.extension.FileExtension.bufferedOutputStream
 
 class Combine
 {
-    fun loop()
+    fun execute()
     {
         println("即将进行版本合并操作，请输入要合并的版本数量")
 

@@ -8,14 +8,14 @@ import mcpatch.exception.McPatchManagerException
 
 class Restore
 {
-    fun loop()
+    fun execute()
     {
         println("正在计算文件修改，可能需要一点时间")
 
         val workspace = RealFile.CreateFromRealFile(workspaceDir)
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(history.files, workspace.files)
+        val hasDiff = diff.compare(workspace.files, history.files)
 
         if (hasDiff)
         {
@@ -40,7 +40,7 @@ class Restore
 
         println("正在还原文件修改，可能需要一点时间")
 
-        workspace.applyDiff(diff, historyDir)
+        workspace.syncFrom(diff, historyDir)
 
         println("所有文件修改已还原！")
     }

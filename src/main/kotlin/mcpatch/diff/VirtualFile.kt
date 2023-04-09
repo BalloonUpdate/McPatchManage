@@ -119,17 +119,17 @@ class VirtualFile : ComparableFile
      */
     fun applyDiff(diff: DirectoryDiff, source: File2)
     {
-        for (f in diff.oldFiles)
+        for (f in diff.redundantFiles)
         {
             removeFile(f)
         }
 
-        for (f in diff.oldFolders)
+        for (f in diff.redundantFolders)
         {
             removeFile(f)
         }
 
-        for (f in diff.newFolders)
+        for (f in diff.missingFolders)
         {
             val parent = PathUtils.getDirPathPart(f)
             val filename = PathUtils.getFileNamePart(f)
@@ -138,7 +138,7 @@ class VirtualFile : ComparableFile
             dir.files += VirtualFile(filename, mutableListOf(), dir)
         }
 
-        for (f in diff.newFiles)
+        for (f in diff.missingFiles)
         {
             val parent = PathUtils.getDirPathPart(f)
             val filename = PathUtils.getFileNamePart(f)

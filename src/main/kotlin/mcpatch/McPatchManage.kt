@@ -38,8 +38,8 @@ object McPatchManage
             try {
                 when(val input = Input.readAnyString())
                 {
-                    "c" -> Create().loop()
-                    "t" -> Test().loop()
+                    "c" -> Create().execute()
+                    "t" -> Test().execute()
                     "?" -> {
                         println("隐藏指令：")
                         println("  combine: 合并历史更新包")
@@ -47,10 +47,10 @@ object McPatchManage
                         println("  revert: 还原历史目录(history)的修改")
                         println("  clear: 删除所有历史版本")
                     }
-                    "combine" -> Combine().loop()
-                    "restore" -> Restore().loop()
-                    "revert" -> Revert().loop()
-                    "clear" -> Clear().loop()
+                    "combine" -> Combine().execute()
+                    "restore" -> Restore().execute()
+                    "revert" -> Revert().execute()
+                    "clear" -> Clear().execute()
                     "q" -> break
                     else -> {
                         if (input.isNotEmpty())

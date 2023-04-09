@@ -21,23 +21,25 @@ class RealFile(val file: File2, parent: RealFile?, childrenLinkThis: Boolean) : 
     override fun get(path: String): RealFile? = getFileInternal(path) as RealFile?
 
     /**
-     * 将本目录作为to目录，应用一个Diff对象
-     * @param diff Diff对象
-     * @param from from目录
+     * 将本目录作为variable目录，应用一个Diff对象
      */
-    fun applyDiff(diff: DirectoryDiff, from: File2)
+    fun syncFrom(diff: DirectoryDiff, invariable: File2)
     {
-        for (f in diff.oldFiles)
+        for ((from, to) in diff.moveFiles)
+            (file + from).move(file + to)
+
+        for (f in diff.redundantFiles)
             (file + f).delete()
 
-        for (f in diff.oldFolders)
+        for (f in diff.redundantFolders)
             (file + f).delete()
 
-        for (f in diff.newFolders)
+        for (f in diff.missingFolders)
             (file + f).mkdirs()
 
-        for (f in diff.newFiles)
-            (from + f).copy(file + f)
+        for (f in diff.missingFiles)
+            (invariable + f).copy(file + f)
+
     }
 
     companion object {

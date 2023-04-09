@@ -6,7 +6,7 @@ import mcpatch.exception.McPatchManagerException
 
 class Clear
 {
-    fun loop()
+    fun execute()
     {
         println("即将清理历史目录(history)和公共目录(public)，但不会清理工作空间目录(workspace)")
         println("此操作非常危险，仅供调试使用！确定要继续吗？（输入y或者n）")

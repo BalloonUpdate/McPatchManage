@@ -5,17 +5,14 @@ import mcpatch.McPatchManage.historyDir
 import mcpatch.McPatchManage.publicDir
 import mcpatch.McPatchManage.versionList
 import mcpatch.core.PatchFileReader
-import mcpatch.data.VersionData
 import mcpatch.diff.DirectoryDiff
 import mcpatch.diff.RealFile
 import mcpatch.exception.McPatchManagerException
 import mcpatch.extension.FileExtension.bufferedOutputStream
-import org.json.JSONObject
-import java.io.ByteArrayOutputStream
 
 class Revert
 {
-    fun loop()
+    fun execute()
     {
         println("即将同时还原工作空间目录(workspace)和历史目录(history)下的内容")
         println("要继续吗？（输入y或者n）")
@@ -51,6 +48,8 @@ class Revert
 
                 file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
             }
+
+            println("[$version] 版本 $version 处理完成")
         }
 
         // 同步workspace目录
@@ -62,8 +61,8 @@ class Revert
         val workspace = RealFile.CreateFromRealFile(McPatchManage.workspaceDir)
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
-        diff.compare(from = history.files, to = workspace.files)
-        workspace.applyDiff(diff, historyDir)
+        diff.compare(workspace.files, history.files)
+        workspace.syncFrom(diff, historyDir)
 
         println("所有目录已经还原！")
     }

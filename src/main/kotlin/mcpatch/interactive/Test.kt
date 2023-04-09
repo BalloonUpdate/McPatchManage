@@ -7,7 +7,7 @@ import java.io.ByteArrayOutputStream
 
 class Test
 {
-    fun loop()
+    fun execute()
     {
         println("正在验证所有版本文件")
 

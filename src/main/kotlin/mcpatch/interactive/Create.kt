@@ -6,6 +6,7 @@ import mcpatch.core.Input
 import mcpatch.core.PatchFileReader
 import mcpatch.core.VersionList
 import mcpatch.data.ModificationMode
+import mcpatch.data.MoveFile
 import mcpatch.data.NewFile
 import mcpatch.data.VersionData
 import mcpatch.diff.DirectoryDiff
@@ -50,7 +51,7 @@ class Create
         if (max(oldLen, newLen) > Int.MAX_VALUE.toLong() - 1)
             throw McPatchManagerException("暂时不支持打包大小超过2GB的文件： $newFile")
 
-        println("打包文件(${index + 1}/${diff.newFiles.size}) $newFile")
+        println("打包文件(${index + 1}/${diff.missingFiles.size}) $newFile")
 
         when (mode)
         {
@@ -144,12 +145,12 @@ class Create
         val workspace = RealFile.CreateFromRealFile(workspaceD)
         val history = RealFile.CreateFromRealFile(historyD)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(workspace.files, history.files)
+        val hasDiff = diff.compare(history.files, workspace.files)
 
         if (hasDiff)
         {
             println("----------以下为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
-            println(diff.toString("旧目录", "新目录", "旧文件", "新文件"))
+            println(diff)
             println("----------以上为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
         } else {
             println("没有任何文件改动，即将创建一个空版本")
@@ -179,7 +180,7 @@ class Create
         changelogs.open()
 
         // 计算预计内存消耗
-        val totalMemory = (diff.newFiles.sumOf {
+        val totalMemory = (diff.missingFiles.sumOf {
             val old = historyD + it
             val new = workspaceD + it
             val newLen = if (new.exists) new.length else 0
@@ -215,25 +216,29 @@ class Create
 
             val versionMeta = VersionData()
 
+            versionMeta.moveFiles.addAll(diff.moveFiles.map { MoveFile(it.first, it.second) })
+            versionMeta.oldFiles.addAll(diff.redundantFiles)
+            versionMeta.oldFolders.addAll(diff.redundantFolders)
+            versionMeta.newFolders.addAll(diff.missingFolders)
+            versionMeta.changeLogs = changelogs.get() ?: ""
+
             // 写出文件更新数据
-            if (diff.newFiles.isNotEmpty())
+            if (diff.missingFiles.isNotEmpty())
+            {
                 ByteArrayOutputStream().use { sharedBuf ->
-                    for ((index, newFile) in diff.newFiles.withIndex())
+                    for ((index, newFile) in diff.missingFiles.withIndex())
                     {
                         sharedBuf.reset()
                         versionMeta.newFiles.add(packFile(workspaceD, historyD, diff, sharedBuf, archive, index, newFile))
                     }
                 }
-            versionMeta.oldFiles.addAll(diff.oldFiles)
-            versionMeta.oldFolders.addAll(diff.oldFolders)
-            versionMeta.newFolders.addAll(diff.newFolders)
-            versionMeta.changeLogs = changelogs.get() ?: ""
+            }
 
             // 全量包在安装之前会删除所有跟踪的文件，已达到强制更新的目的
             if (isFull)
             {
-                versionMeta.oldFolders.addAll(diff.newFolders)
-                versionMeta.oldFiles.addAll(diff.newFiles)
+                versionMeta.oldFolders.addAll(diff.missingFolders)
+                versionMeta.oldFiles.addAll(diff.missingFiles)
             }
 
             // 写出元数据
@@ -274,7 +279,7 @@ class Create
         {
             // 同步history
             println("正在同步文件状态，可能需要一点时间")
-            history.applyDiff(diff, workspaceD)
+            history.syncFrom(diff, workspaceD)
         } else {
             println("已跳过文件状态同步")
         }
@@ -296,7 +301,7 @@ class Create
         println("创建版本 $version 完成，耗时 ${elapse.toFloat() / 1000} 秒")
     }
 
-    fun loop()
+    fun execute()
     {
         val changelogs = TextFileEditor(McPatchManage.workdir + "changelogs.txt")
 

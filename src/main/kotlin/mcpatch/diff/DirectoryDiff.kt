@@ -1,91 +1,85 @@
 package mcpatch.diff
 
+import mcpatch.utils.PathUtils
+
 /**
  * 目录差异对比
  */
 class DirectoryDiff
 {
-    val oldFolders: MutableList<String> = mutableListOf()
-    val oldFiles: MutableList<String> = mutableListOf()
-    val newFolders: MutableList<String> = mutableListOf()
-    val newFiles: MutableList<String> = mutableListOf()
-
-    /**
-     * 总共有多少个文件变动
-     */
+    val missingFolders: MutableList<String> = mutableListOf()
+    val missingFiles: MutableList<String> = mutableListOf()
+    val redundantFolders: MutableList<String> = mutableListOf()
+    val redundantFiles: MutableList<String> = mutableListOf()
+    val moveFiles: MutableList<Pair<String, String>> = mutableListOf()
     var totalDiff: Int = 0
 
     /**
-     * 计算from目录同步到to目录之间的所有文件改动。from目录是参照目录，需要改动的是to目录
-     * @param from 参照目录
-     * @param to 目标目录
+     * 计算variable目录要变成到invariable目录之间的所有文件改动
+     * @param variable 改动目录
+     * @param invariable 参照目录
      * @return 有无差异
      */
-    fun compare(from: List<ComparableFile>, to: List<ComparableFile>): Boolean
+    fun compare(variable: List<ComparableFile>, invariable: List<ComparableFile>): Boolean
     {
-        findNews(from, to)
-        findOlds(from, to)
+        findMissings(invariable, variable)
+        findRedundants(invariable, variable)
+        detectFileMovings(invariable, variable)
 
-        totalDiff = oldFolders.size + oldFiles.size + newFolders.size + newFiles.size
+        totalDiff = missingFolders.size + missingFiles.size + redundantFolders.size + redundantFiles.size + moveFiles.size
         return totalDiff > 0
     }
 
-    /** 扫描需要下载的文件(不包括被删除的)
-     * @param from 参照目录
-     * @param to 目标目录
+    /**
+     * 寻找缺少的文件
      */
-    private fun findNews(from: List<ComparableFile>, to: List<ComparableFile>) {
-        for (c in from)
+    private fun findMissings(invariable: List<ComparableFile>, variable: List<ComparableFile>)
+    {
+        for (i in invariable)
         {
-            val corresponding = to.firstOrNull { it.name == c.name } // 此文件可能不存在
+            val v = variable.firstOrNull { it.name == i.name }
 
-            if(corresponding == null) // 如果文件不存在的话，就不用校验了，可以直接进行下载
+            if(v == null)
             {
-                markAsNew(c)
+                markAsMissing(i)
                 continue
             }
 
-            if(c.isFile)
+            if(i.isFile)
             {
-                if(corresponding.isFile)
+                if(v.isFile)
                 {
-                    if (!compareSingleFile(corresponding, c))
-                    {
-//                        markAsOld(corresponding)
-                        markAsNew(c)
-                    }
+                    if (!compareSingleFile(v, i))
+                        markAsMissing(i)
                 } else {
-//                    markAsOld(corresponding)
-                    markAsNew(c)
+                    markAsMissing(i)
                 }
             } else  {
-                if(corresponding.isFile)
+                if(v.isFile)
                 {
-//                    markAsOld(corresponding)
-                    markAsNew(c)
+                    markAsMissing(i)
                 } else {
-                    findNews(c.files, corresponding.files)
+                    findMissings(i.files, v.files)
                 }
             }
         }
     }
 
-    /** 扫描需要删除的文件
-     * @param from 参照目录
-     * @param to 目标目录
+    /**
+     * 寻找多余的文件
      */
-    private fun findOlds(from: List<ComparableFile>, to: List<ComparableFile>)
+    private fun findRedundants(invariable: List<ComparableFile>, variable: List<ComparableFile>)
     {
-        for (f in to)
+        for (v in variable)
         {
-            val corresponding = from.firstOrNull { it.name == f.name }
+            val i = invariable.firstOrNull { it.name == v.name }
 
-            if(corresponding != null)
+            if(i != null)
             {
-                if(!f.isFile && !corresponding.isFile)
-                    findOlds(corresponding.files, f.files)
+                if(!v.isFile && !i.isFile)
+                    findRedundants(i.files, v.files)
             } else {
-                markAsOld(f)
+                markAsRedundant(v)
             }
         }
     }
@@ -101,85 +95,105 @@ class DirectoryDiff
     }
 
     /**
-     * 将一个文件文件或者目录标记为旧文件
-     * @param old 被标记的文件或者目录
+     * 将一个文件或者目录标记为多余
      */
-    private fun markAsOld(old: ComparableFile)
+    private fun markAsRedundant(file: ComparableFile)
     {
-        if(!old.isFile)
+        if(!file.isFile)
         {
-            for (f in old.files)
+            for (f in file.files)
             {
                 if(f.isFile)
-                    oldFiles += f.relativePath
+                    redundantFiles += f.relativePath
                 else
-                    markAsOld(f)
+                    markAsRedundant(f)
             }
 
-            oldFolders += old.relativePath
+            redundantFolders += file.relativePath
         } else {
-            oldFiles += old.relativePath
+            redundantFiles += file.relativePath
         }
     }
 
     /**
-     * 将一个文件文件或者目录标记为新文件
-     * @param new 被标记的文件或者目录
+     * 将一个文件或者目录标记为缺少
      */
-    private fun markAsNew(new: ComparableFile)
+    private fun markAsMissing(file: ComparableFile)
     {
-        if (new.isFile)
+        if (file.isFile)
         {
-            newFiles += new.relativePath
+            missingFiles += file.relativePath
         } else {
-            newFolders += new.relativePath
-            for (n in new.files)
-                markAsNew(n)
+            missingFolders += file.relativePath
+
+            for (f in file.files)
+                markAsMissing(f)
         }
     }
 
     /**
-     * 输出到String
-     * @param oldFolder 旧目录的标签
-     * @param newFolder 新目录的标签
-     * @param oldFile 旧文件的标签
-     * @param newFile 新文件的标签
-     * @param lineSeparator 行间空隙
+     * 检查文件移动
      */
-    fun toString(
-        oldFolder: String,
-        newFolder: String,
-        oldFile: String,
-        newFile: String,
-        lineSeparator: String = "\n",
-        overwrittenFiles: List<String> = listOf()
-    ): String {
-        return buildString {
-            for (f in oldFolders)
-                append("$oldFolder: $f\n")
+    private fun detectFileMovings(invariable: List<ComparableFile>, variable: List<ComparableFile>)
+    {
+        fun get(list: List<ComparableFile>, path: String): ComparableFile
+        {
+            val index = path.indexOf("/")
+            val rootName = if (index == -1) path else path.substring(0, index)
+            val root = list.first { f -> f.name == rootName }
 
-            if (oldFolders.isNotEmpty() && newFolders.isNotEmpty())
-                append(lineSeparator)
+            if (index == -1)
+                return root
 
-            for (f in newFolders)
-                append("$newFolder: $f\n")
+            return root[path.substring(index + 1)]!!
+        }
 
-            if (newFolders.isNotEmpty() && oldFiles.isNotEmpty())
-                append(lineSeparator)
+        val hashCachesI = mutableMapOf<String, String>()
+        val hashCachesV = mutableMapOf<String, String>()
 
-            for (f in oldFiles)
-                append("$oldFile: $f\n")
+        val redundantFileNames = redundantFiles.map { Pair(PathUtils.getFileNamePart(it), it) }
+        val missingFileNames = missingFiles.map { Pair(PathUtils.getFileNamePart(it), it) }
 
-            if (oldFiles.isNotEmpty() && newFiles.isNotEmpty())
-                append(lineSeparator)
+        for (redundant in redundantFileNames)
+        {
+            for (missing in missingFileNames)
+            {
+                // 首先需要文件名相同
+                if (redundant.first != missing.first)
+                    continue
 
-            for (f in newFiles)
-                append("$newFile: $f\n")
-        }.trim()
+                val v = get(variable, redundant.second)
+                val i = get(invariable, missing.second)
+                val hashV = hashCachesV.getOrPut(redundant.second) { v.hash }
+                val hashI = hashCachesI.getOrPut(missing.second) { i.hash }
+
+                // 再者需要校验相同
+                if (hashV == hashI)
+                    moveFiles += Pair(v.relativePath, i.relativePath)
+            }
+        }
+
+        missingFiles.removeIf { moveFiles.any { m -> m.second == it } }
+        redundantFiles.removeIf { moveFiles.any { m -> m.first == it } }
     }
 
     override fun toString(): String
     {
-        return toString("旧目录", "新目录", "旧文件", "新文件")
+        return buildString {
+            for (f in redundantFolders)
+                append("旧目录: $f\n")
+
+            for (f in missingFolders)
+                append("新目录: $f\n")
+
+            for (f in redundantFiles)
+                append("旧文件: $f\n")
+
+            for (f in missingFiles)
+                append("新文件: $f\n")
+
+            for ((from, to) in moveFiles)
+                append("移动文件: $from => $to\n")
+        }.trim()
     }
 }
