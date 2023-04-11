@@ -5,10 +5,15 @@ import mcpatch.McPatchManage.historyDir
 import mcpatch.McPatchManage.publicDir
 import mcpatch.McPatchManage.versionList
 import mcpatch.core.PatchFileReader
+import mcpatch.data.ModificationMode
 import mcpatch.diff.DirectoryDiff
 import mcpatch.diff.RealFile
 import mcpatch.exception.McPatchManagerException
 import mcpatch.extension.FileExtension.bufferedOutputStream
+import mcpatch.extension.StreamExtension.copyAmountTo
+import mcpatch.stream.MemoryOutputStream
+import org.apache.commons.compress.archivers.zip.ZipFile
+import org.apache.commons.compress.utils.SeekableInMemoryByteChannel
 
 class Revert
 {
@@ -33,7 +38,7 @@ class Revert
             if (!patchFile.exists)
                 throw McPatchManagerException("版本 ${patchFile.path} 的数据文件丢失或者不存在，版本还原失败")
 
-            val reader = PatchFileReader(version, patchFile)
+            val reader = PatchFileReader(version, ZipFile(patchFile.file, "utf-8"))
 
             // 删除旧文件和旧目录，还有创建新目录
             reader.meta.oldFiles.map { (historyDir + it) }.forEach { it.delete() }
@@ -42,11 +47,26 @@ class Revert
 
             for ((index, entry) in reader.withIndex())
             {
-                println("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.newFile.path}")
+                println("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.meta.path}")
 
-                val file = historyDir + entry.newFile.path
+                val file = historyDir + entry.meta.path
 
-                file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
+                if (entry.mode == ModificationMode.ZipModify)
+                {
+                    val stream = entry.getInputStream()
+                    val mem = MemoryOutputStream(entry.meta.rawLength.toInt())
+                    stream.copyAmountTo(mem, entry.meta.rawLength)
+                    val reader2 = PatchFileReader(version, ZipFile(SeekableInMemoryByteChannel(mem.buffer())))
+                    reader2.meta.oldFiles.map { (historyDir + it) }.forEach { it.delete() }
+                    reader2.meta.oldFolders.map { (historyDir + it) }.forEach { it.delete() }
+                    reader2.meta.newFolders.map { (historyDir + it) }.forEach { it.mkdirs() }
+
+                    // 上次开发进度推进到这里。
+
+                    continue
+                } else {
+                    file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
+                }
             }
 
             println("[$version] 版本 $version 处理完成")
@@ -61,7 +81,7 @@ class Revert
         val workspace = RealFile.CreateFromRealFile(McPatchManage.workspaceDir)
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
-        diff.compare(workspace.files, history.files)
+        diff.compare(workspace.files, history.files, true)
         workspace.syncFrom(diff, historyDir)
 
         println("所有目录已经还原！")

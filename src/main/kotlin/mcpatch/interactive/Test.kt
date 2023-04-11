@@ -3,6 +3,7 @@ package mcpatch.interactive
 import mcpatch.McPatchManage
 import mcpatch.core.PatchFileReader
 import mcpatch.exception.McPatchManagerException
+import org.apache.commons.compress.archivers.zip.ZipFile
 import java.io.ByteArrayOutputStream
 
 class Test
@@ -20,13 +21,13 @@ class Test
 
             println("开始验证 $version 版本")
 
-            val reader = PatchFileReader(version, patchFile)
+            val reader = PatchFileReader(version, ZipFile(patchFile.file, "utf-8"))
 
             val buf = ByteArrayOutputStream()
 
             for ((index, entry) in reader.withIndex())
             {
-                println("[$version] 验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.newFile.path}")
+                println("[$version] 验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.meta.path}")
 
                 buf.reset()
                 entry.copyTo(buf)

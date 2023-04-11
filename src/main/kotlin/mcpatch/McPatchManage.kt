@@ -2,10 +2,15 @@ package mcpatch
 
 import mcpatch.core.Input
 import mcpatch.core.VersionList
+import mcpatch.diff.DirectoryDiff
+import mcpatch.diff.ZipEntryFile
 import mcpatch.exception.McPatchManagerException
 import mcpatch.interactive.*
 import mcpatch.utils.EnvironmentUtils
 import mcpatch.utils.File2
+import org.apache.commons.compress.archivers.zip.ZipFile
+import org.apache.tools.ant.types.resources.Difference
+import kotlin.system.exitProcess
 
 object McPatchManage
 {
@@ -22,6 +27,23 @@ object McPatchManage
         historyDir.mkdirs()
         workspaceDir.mkdirs()
         publicDir.mkdirs()
+
+//        val o = File2("testdir/旧建文件夹.zip").file
+//        val n = File2("testdir/新建文件夹P.zip").file
+//
+//        ZipFile(o, "utf-8").use { oo ->
+//            ZipFile(n, "utf-8").use { nn ->
+//                val nnn = ZipEntryFile.CreateFromZipFile(nn)
+//                val ooo = ZipEntryFile.CreateFromZipFile(oo)
+//
+//                val diff = DirectoryDiff()
+//                diff.compare(ooo.files, nnn.files)
+//                println(diff)
+//
+//            }
+//        }
+//
+//        exitProcess(0)
 
         println("McPatchManage v${EnvironmentUtils.version}")
 

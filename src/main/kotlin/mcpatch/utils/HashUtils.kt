@@ -10,6 +10,17 @@ import java.util.zip.CRC32
 
 object HashUtils
 {
+    fun crc32str(value: Long): String
+    {
+        val array = ByteArray(4)
+        array[3] = (value shr (8 * 0) and 0xFF).toByte()
+        array[2] = (value shr (8 * 1) and 0xFF).toByte()
+        array[1] = (value shr (8 * 2) and 0xFF).toByte()
+        array[0] = (value shr (8 * 3) and 0xFF).toByte()
+
+        return HashUtils.bin2str(array)
+    }
+
     /**
      * 计算文件的的crc32
      * @param file 要计算的文件

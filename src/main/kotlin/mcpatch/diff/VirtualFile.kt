@@ -51,107 +51,105 @@ class VirtualFile : ComparableFile
         relativePath = (if (parent != null) parent.relativePath + "/" else "") + name
     }
 
-    override fun get(path: String): VirtualFile? = getFileInternal(path) as VirtualFile?
+//    /**
+//     * 删除一个文件
+//     */
+//    fun removeFile(relativePath: String)
+//    {
+//        if (isFile)
+//            throw InvalidObjectException("the file named '$name' is not a directory, is a file.")
+//
+//        val split = relativePath.replace("\\", "/").split("/")
+//        var currentDir = this
+//
+//        for ((index, name) in split.withIndex())
+//        {
+//            val reachEnd = index == split.size - 1
+//            val current = currentDir.files.first { it.name == name }
+//            if (!reachEnd) currentDir = current else currentDir.files.removeIf { it.name == name }
+//        }
+//    }
 
-    /**
-     * 删除一个文件
-     */
-    override fun removeFile(relativePath: String)
-    {
-        if (isFile)
-            throw InvalidObjectException("the file named '$name' is not a directory, is a file.")
+//    /**
+//     * 深拷贝当前对象
+//     */
+//    fun clone(): VirtualFile
+//    {
+//        fun c(vf: VirtualFile, _parent: VirtualFile?): VirtualFile
+//        {
+//            return if (isFile)
+//                VirtualFile(vf.name, vf.length, vf.hash, vf.modified, _parent)
+//            else
+//                VirtualFile(vf.name, mutableListOf(), _parent)
+//                    .also { v -> v.files.addAll(vf.files.map { c(it, v) }) }
+//        }
+//
+//        return c(this, parent)
+//    }
 
-        val split = relativePath.replace("\\", "/").split("/")
-        var currentDir = this
+//    /**
+//     * 将当前VirualFile序列号为JsonObject
+//     */
+//    fun toJsonObject(): JSONObject
+//    {
+//        val json = JSONObject()
+//        json.put("name", name)
+//
+//        if (isFile)
+//        {
+//            json.put("length", length)
+//            json.put("hash", hash)
+//            json.put("modified", modified)
+//        } else {
+//            val files = JSONArray()
+//            for (child in this.files)
+//                files.put(child.toJsonObject())
+//            json.put("files", files)
+//        }
+//
+//        return json
+//    }
 
-        for ((index, name) in split.withIndex())
-        {
-            val reachEnd = index == split.size - 1
-            val current = currentDir.files.first { it.name == name }
-            if (!reachEnd) currentDir = current else currentDir.files.removeIf { it.name == name }
-        }
-    }
-
-    /**
-     * 深拷贝当前对象
-     */
-    fun clone(): VirtualFile
-    {
-        fun c(vf: VirtualFile, _parent: VirtualFile?): VirtualFile
-        {
-            return if (isFile)
-                VirtualFile(vf.name, vf.length, vf.hash, vf.modified, _parent)
-            else
-                VirtualFile(vf.name, mutableListOf(), _parent)
-                    .also { v -> v.files.addAll(vf.files.map { c(it, v) }) }
-        }
-
-        return c(this, parent)
-    }
-
-    /**
-     * 将当前VirualFile序列号为JsonObject
-     */
-    fun toJsonObject(): JSONObject
-    {
-        val json = JSONObject()
-        json.put("name", name)
-
-        if (isFile)
-        {
-            json.put("length", length)
-            json.put("hash", hash)
-            json.put("modified", modified)
-        } else {
-            val files = JSONArray()
-            for (child in this.files)
-                files.put(child.toJsonObject())
-            json.put("files", files)
-        }
-
-        return json
-    }
-
-    /**
-     * 从真实文件对象更新自己
-     * @param diff Diff对象
-     * @param source 参照目录
-     */
-    fun applyDiff(diff: DirectoryDiff, source: File2)
-    {
-        for (f in diff.redundantFiles)
-        {
-            removeFile(f)
-        }
-
-        for (f in diff.redundantFolders)
-        {
-            removeFile(f)
-        }
-
-        for (f in diff.missingFolders)
-        {
-            val parent = PathUtils.getDirPathPart(f)
-            val filename = PathUtils.getFileNamePart(f)
-
-            val dir = if (parent != null) this[parent]!! else this
-            dir.files += VirtualFile(filename, mutableListOf(), dir)
-        }
-
-        for (f in diff.missingFiles)
-        {
-            val parent = PathUtils.getDirPathPart(f)
-            val filename = PathUtils.getFileNamePart(f)
-
-            val dir = if (parent != null) this[parent]!! else this
-            val file = source + f
-            val length = file.length
-            val modified = file.modified
-            val hash = HashUtils.crc32(file.file)
-
-            dir.files += VirtualFile(filename, length, hash, modified, dir)
-        }
-    }
+//    /**
+//     * 从真实文件对象更新自己
+//     * @param diff Diff对象
+//     * @param source 参照目录
+//     */
+//    fun applyDiff(diff: DirectoryDiff, source: File2)
+//    {
+//        for (f in diff.redundantFiles)
+//        {
+//            removeFile(f)
+//        }
+//
+//        for (f in diff.redundantFolders)
+//        {
+//            removeFile(f)
+//        }
+//
+//        for (f in diff.missingFolders)
+//        {
+//            val parent = PathUtils.getDirPathPart(f)
+//            val filename = PathUtils.getFileNamePart(f)
+//
+//            val dir = if (parent != null) this.get(parent)!! as VirtualFile else this
+//            dir.files += VirtualFile(filename, mutableListOf(), dir)
+//        }
+//
+//        for (f in diff.missingFiles)
+//        {
+//            val parent = PathUtils.getDirPathPart(f)
+//            val filename = PathUtils.getFileNamePart(f)
+//
+//            val dir = if (parent != null) this.get(parent)!! as VirtualFile else this
+//            val file = source + f
+//            val length = file.length
+//            val modified = file.modified
+//            val hash = HashUtils.crc32(file.file)
+//
+//            dir.files += VirtualFile(filename, length, hash, modified, dir)
+//        }
+//    }
 
     companion object {
         /**

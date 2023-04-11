@@ -11,6 +11,7 @@ import mcpatch.data.NewFile
 import mcpatch.data.VersionData
 import mcpatch.diff.DirectoryDiff
 import mcpatch.diff.RealFile
+import mcpatch.diff.ZipEntryFile
 import mcpatch.editor.TextFileEditor
 import mcpatch.exception.McPatchManagerException
 import mcpatch.extension.FileExtension.bufferedInputStream
@@ -26,36 +27,48 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.tools.bzip2.CBZip2OutputStream
 import java.io.ByteArrayOutputStream
+import java.util.*
 import kotlin.math.max
 
 class Create
 {
     private fun packFile(
-        workspaceD: File2,
-        historyD: File2,
-        diff: DirectoryDiff,
+        old: File2,
+        new: File2,
         sharedBuf: MemoryOutputStream,
         output: ZipArchiveOutputStream,
-        index: Int,
-        newFile: String
+        path: String
     ): NewFile {
-        val old = historyD + newFile
-        val new = workspaceD + newFile
+        fun isUtf8Zip(file: File2): Boolean
+        {
+            if (!file.exists)
+                return false
+
+            if (!file.name.endsWith(".jar") && !file.name.endsWith(".zip"))
+                return false
+
+            if (file.length == 0L)
+                return false
+
+            ZipFile(file.file).use {
+                for (entry in it.entriesInPhysicalOrder)
+                    if (!it.canReadEntryData(entry))
+                        return false
+
+                return it.encoding.replace("-", "").lowercase(Locale.getDefault()) == "utf8"
+            }
+        }
+
         val newLen = if (new.exists) new.length else 0
         val oldLen = if (old.exists) old.length else 0
         val case = old.name != new.name && old.name.equals(new.name, ignoreCase = true)
-        val isZip = (newLen > 0 && oldLen > 0 && old.name.endsWith(".jar") || old.name.endsWith(".zip") && new.name.endsWith(".jar") || new.name.endsWith(".zip"))
+        val isZip = isUtf8Zip(old) && isUtf8Zip(new)
         val mode = when {
             newLen == 0L -> ModificationMode.Empty
             (oldLen == 0L && newLen > 0) || case -> ModificationMode.Fill
             isZip -> ModificationMode.ZipModify
             else -> ModificationMode.Modify
         }
-
-        if (max(oldLen, newLen) > Int.MAX_VALUE.toLong() - 1)
-            throw McPatchManagerException("暂时不支持打包大小超过2GB的文件： $newFile")
-
-        println("打包文件(${index + 1}/${diff.missingFiles.size}) $newFile")
 
         when (mode)
         {
@@ -75,7 +88,7 @@ class Create
                     bzip.flush()
 
                     // 写出数据
-                    val entry = ZipArchiveEntry(newFile)
+                    val entry = ZipArchiveEntry(path)
                     entry.size = sharedBuf.size().toLong()
                     entry.crc = sharedBuf.crc32()
                     output.putArchiveEntry(entry)
@@ -83,7 +96,7 @@ class Create
                     output.closeArchiveEntry()
 
                     return NewFile(
-                        path = newFile,
+                        path = path,
                         mode = mode,
                         oldHash = "",
                         newHash = HashUtils.sha1(new.file),
@@ -95,7 +108,7 @@ class Create
             }
 
             ModificationMode.Empty -> {
-                return NewFile(newFile, mode, "", "", "", "", 0)
+                return NewFile(path, mode, "", "", "", "", 0)
             }
 
             ModificationMode.Modify -> { // 计算差异
@@ -115,7 +128,7 @@ class Create
                         bzip.flush()
 
                         // 写出数据
-                        val entry = ZipArchiveEntry(newFile)
+                        val entry = ZipArchiveEntry(path)
                         entry.size = sharedBuf.size().toLong()
                         entry.crc = sharedBuf.crc32()
                         output.putArchiveEntry(entry)
@@ -123,7 +136,7 @@ class Create
                         output.closeArchiveEntry()
 
                         return NewFile(
-                            path = newFile,
+                            path = path,
                             mode = mode,
                             oldHash = HashUtils.sha1(old.file),
                             newHash = HashUtils.sha1(new.file),
@@ -138,9 +151,86 @@ class Create
             ModificationMode.ZipModify -> {
                 ZipFile(old.file, "utf-8").use { zipO ->
                     ZipFile(new.file, "utf-8").use { zipN ->
-                        val diff = DirectoryDiff()
-                        diff.compare()
+                        val n = ZipEntryFile.CreateFromZipFile(zipN)
+                        val o = ZipEntryFile.CreateFromZipFile(zipO)
 
+                        // 计算压缩包内文件差异
+                        val diff2 = DirectoryDiff()
+                        diff2.compare(o.files, n.files, false)
+
+                        // 生成元数据1
+                        val meta = VersionData()
+                        meta.moveFiles.addAll(diff2.moveFiles.map { MoveFile(it.first, it.second) })
+                        meta.oldFiles.addAll(diff2.redundantFiles)
+                        meta.oldFolders.addAll(diff2.redundantFolders)
+                        meta.newFolders.addAll(diff2.missingFolders)
+
+                        // 创建嵌套更新包
+                        ZipArchiveOutputStream(sharedBuf).use { nest ->
+                            nest.encoding = "utf-8"
+
+                            MemoryOutputStream().use { temp ->
+                                for (nf in diff2.missingFiles)
+                                {
+                                    temp.reset()
+
+                                    val entry = zipN.getEntry(nf)
+
+                                    // 打开新zip中对应文件的输入流，然后计算crc32
+                                    zipN.getInputStream(entry).use { file ->
+                                        // 先复制到内存，同时计算crc32
+                                        file.copyAmountTo(temp, entry.size)
+
+                                        val e = ZipArchiveEntry(nf)
+                                        e.size = entry.size
+                                        e.crc = temp.crc32()
+                                        nest.putArchiveEntry(e)
+                                        temp.writeTo(nest)
+                                        nest.closeArchiveEntry()
+
+                                        val sha1 = temp.sha1()
+                                        meta.newFiles.add(NewFile(
+                                            path = nf,
+                                            mode = ModificationMode.Fill,
+                                            oldHash = "",
+                                            newHash = sha1,
+                                            bzippedHash = sha1,
+                                            rawHash = sha1,
+                                            rawLength = entry.size
+                                        ))
+                                    }
+                                }
+                            }
+
+                            // 写出元数据
+                            val bytes = meta.serializeToJson().toString(4).encodeToByteArray()
+                            val entry = ZipArchiveEntry(".mcpatch-meta.json")
+                            entry.size = bytes.size.toLong()
+                            entry.crc = HashUtils.crc32(bytes)
+                            nest.putArchiveEntry(entry)
+                            nest.write(bytes)
+                            nest.closeArchiveEntry()
+
+                            nest.finish()
+                        }
+
+                        // 写出数据
+                        val entry = ZipArchiveEntry(path)
+                        entry.size = sharedBuf.size().toLong()
+                        entry.crc = sharedBuf.crc32()
+                        output.putArchiveEntry(entry)
+                        sharedBuf.writeTo(output)
+                        output.closeArchiveEntry()
+
+                        return NewFile(
+                            path = path,
+                            mode = mode,
+                            oldHash = "",
+                            newHash = "---",
+                            bzippedHash = "---",
+                            rawHash = sharedBuf.sha1(),
+                            rawLength = sharedBuf.size().toLong()
+                        )
                     }
                 }
             }
@@ -161,7 +251,7 @@ class Create
         val workspace = RealFile.CreateFromRealFile(workspaceD)
         val history = RealFile.CreateFromRealFile(historyD)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(history.files, workspace.files)
+        val hasDiff = diff.compare(history.files, workspace.files, true)
 
         if (hasDiff)
         {
@@ -229,24 +319,34 @@ class Create
         tempPatchFile.file.bufferedOutputStream(8 * 1024 * 1024).use { tempFile2 ->
             val archive = ZipArchiveOutputStream(tempFile2)
             archive.encoding = "utf-8"
-            archive.setMethod(ZipArchiveOutputStream.STORED)
 
-            val versionMeta = VersionData()
+            val meta = VersionData()
 
-            versionMeta.moveFiles.addAll(diff.moveFiles.map { MoveFile(it.first, it.second) })
-            versionMeta.oldFiles.addAll(diff.redundantFiles)
-            versionMeta.oldFolders.addAll(diff.redundantFolders)
-            versionMeta.newFolders.addAll(diff.missingFolders)
-            versionMeta.changeLogs = changelogs.get() ?: ""
+            meta.moveFiles.addAll(diff.moveFiles.map { MoveFile(it.first, it.second) })
+            meta.oldFiles.addAll(diff.redundantFiles)
+            meta.oldFolders.addAll(diff.redundantFolders)
+            meta.newFolders.addAll(diff.missingFolders)
+            meta.changeLogs = changelogs.get() ?: ""
 
             // 写出文件更新数据
             if (diff.missingFiles.isNotEmpty())
             {
                 MemoryOutputStream().use { sharedBuf ->
-                    for ((index, newFile) in diff.missingFiles.withIndex())
+                    for ((index, path) in diff.missingFiles.withIndex())
                     {
                         sharedBuf.reset()
-                        versionMeta.newFiles.add(packFile(workspaceD, historyD, diff, sharedBuf, archive, index, newFile))
+
+                        val old = historyD + path
+                        val new = workspaceD + path
+                        val newLen = if (new.exists) new.length else 0
+                        val oldLen = if (old.exists) old.length else 0
+
+                        println("打包文件(${index + 1}/${diff.missingFiles.size}) $path")
+
+                        if (max(newLen, oldLen) > Int.MAX_VALUE.toLong() - 1)
+                            throw McPatchManagerException("暂时不支持打包大小超过2GB的文件： $path")
+
+                        meta.newFiles.add(packFile(old, new, sharedBuf, archive, path))
                     }
                 }
             }
@@ -254,12 +354,12 @@ class Create
             // 全量包在安装之前会删除所有跟踪的文件，已达到强制更新的目的
             if (isFull)
             {
-                versionMeta.oldFolders.addAll(diff.missingFolders)
-                versionMeta.oldFiles.addAll(diff.missingFiles)
+                meta.oldFolders.addAll(diff.missingFolders)
+                meta.oldFiles.addAll(diff.missingFiles)
             }
 
             // 写出元数据
-            val bytes = versionMeta.serializeToJson().toString(4).encodeToByteArray()
+            val bytes = meta.serializeToJson().toString(4).encodeToByteArray()
             val entry = ZipArchiveEntry(".mcpatch-meta.json")
             entry.size = bytes.size.toLong()
             entry.crc = HashUtils.crc32(bytes)
@@ -277,11 +377,11 @@ class Create
 
         // 校验更新包
         try {
-            PatchFileReader(version, tempPatchFile).use { reader ->
+            PatchFileReader(version, ZipFile(tempPatchFile.file, "utf-8")).use { reader ->
                 val buf = ByteArrayOutputStream()
                 for ((index, entry) in reader.withIndex())
                 {
-                    println("验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.newFile.path}")
+                    println("验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.meta.path}")
                     buf.reset()
                     entry.copyTo(buf)
                 }

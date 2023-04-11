@@ -16,10 +16,6 @@ class RealFile(val file: File2, parent: RealFile?, childrenLinkThis: Boolean) : 
     override val isFile: Boolean by lazy { file.isFile }
     override val relativePath: String = (if (parent != null) parent.relativePath + "/" else "") + name
 
-    override fun removeFile(relativePath: String) = (file + relativePath).delete()
-
-    override fun get(path: String): RealFile? = getFileInternal(path) as RealFile?
-
     /**
      * 将本目录作为variable目录，应用一个Diff对象
      */
