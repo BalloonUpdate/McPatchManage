@@ -1,46 +1,42 @@
 package mcpatch.core
 
 import java.util.*
+import java.util.concurrent.LinkedTransferQueue
 
 object Input
 {
+    private val buf = LinkedTransferQueue<String>()
+    private val lineBuf = StringBuilder()
+
+    /**
+     * 检查buf内是否有数据
+     */
+    fun hasInput(): Boolean = buf.isNotEmpty()
+
+    /**
+     * 设置buf的初始内容
+     */
+    fun initInput(text: Array<String>)
+    {
+        buf.addAll(text)
+    }
+
     /**
      * 从命令行读取一段符合要求的文字输入
      * @param reg 正则表达式
      * @return [是否符合要求, 输入的内容]
      */
-    fun readInput(reg: String): Pair<Boolean, String>
+    fun readInput(reg: String?): Pair<Boolean, String>
     {
-        System.`in`.skip(System.`in`.available().toLong())
-
         while (true)
         {
-            val input = (readlnOrNull() ?: continue).trim()
+            read()
+            val input = buf.poll()!!
 
-            if (reg.isEmpty() || Regex(reg).matches(input))
+            if (reg == null || Regex(reg).matches(input))
                 return Pair(true, input)
 
             return Pair(false, input)
-        }
-    }
-
-    /**
-     * 从命令行读取一段符合要求的文字输入，直到符合要求为止
-     * @param reg 正则表达式
-     * @param desc 输入内容描述
-     * @return 读取到的内容
-     */
-    fun readInputUntil(reg: String, desc: String): String
-    {
-        while (true)
-        {
-            val input = readInput(reg)
-
-            if (input.first)
-                return input.second
-
-            if (desc.isNotEmpty())
-                println("输入的 <${input.second}> 不是 $desc")
         }
     }
 
@@ -49,15 +45,7 @@ object Input
      */
     fun readAnyString(): String
     {
-        return readInputUntil(".*", "").trim()
-    }
-
-    /**
-     * 从命令行等待Enter
-     */
-    fun waitForEnterPress()
-    {
-        readInput("")
+        return readInput(null).second.trim()
     }
 
     /**
@@ -78,5 +66,47 @@ object Input
             return default
 
         return choice == "y"
+    }
+
+    /**
+     * 从控制台读取输入，如果buf为空则此方法会阻塞
+     */
+    private fun read()
+    {
+        val block = buf.isEmpty()
+
+        if (!block && System.`in`.available() == 0)
+            return
+
+        fun readOne()
+        {
+            val d = System.`in`.read()
+
+            if (d == -1)
+                return
+
+            val chr = d.toChar()
+            val isLineEnd = chr == '\n' || chr == '\r' || chr == ' '
+
+            if (isLineEnd)
+            {
+                if (lineBuf.isNotEmpty())
+                {
+                    buf.add(lineBuf.toString())
+                    lineBuf.clear()
+                }
+            } else {
+                lineBuf.append(chr)
+            }
+        }
+
+        if (block)
+        {
+            while (buf.isEmpty())
+                readOne()
+        } else {
+            for (i in 0 until System.`in`.available())
+                readOne()
+        }
     }
 }

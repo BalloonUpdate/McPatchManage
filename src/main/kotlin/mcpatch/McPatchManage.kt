@@ -6,6 +6,7 @@ import mcpatch.exception.McPatchManagerException
 import mcpatch.interactive.*
 import mcpatch.utils.EnvironmentUtils
 import mcpatch.utils.File2
+import java.util.concurrent.LinkedTransferQueue
 import kotlin.system.exitProcess
 
 object McPatchManage
@@ -21,7 +22,8 @@ object McPatchManage
     fun main(args: Array<String>)
     {
         var exitCode = 0
-        val interactiveMode = args.isEmpty()
+
+        Input.initInput(args)
 
         historyDir.mkdirs()
         workspaceDir.mkdirs()
@@ -29,31 +31,38 @@ object McPatchManage
 
         println("McPatchManage v${EnvironmentUtils.version}")
 
-        do
+        fun printHelp()
         {
-            if (interactiveMode)
-            {
-                println("主菜单: (输入字母执行命令)")
-                println("  c: 创建新版本 (最新版本为 ${versionList.getNewest()} )")
-                println("  s: 检查文件修改状态")
-                println("  ?: 查看隐藏指令")
-                println("  q: 退出")
-                print("> ")
-                System.out.flush()
-            }
+            println("主菜单: (输入字母执行命令)")
+            println("  c: 创建新版本 (最新版本为 ${versionList.getNewest()} )")
+            println("  s: 检查文件修改状态")
+            println("  ?: 查看隐藏命令")
+            println("  q: 退出")
+            print("> ")
+            System.out.flush()
+        }
+
+        var noMenu = false
+
+        while (true)
+        {
+            if (!Input.hasInput() && !noMenu)
+                printHelp()
 
             try {
-                when(val input = if (!interactiveMode) args[0] else Input.readAnyString())
+                noMenu = true
+
+                when(val input = Input.readAnyString())
                 {
-                    "c" -> Create().execute(if (args.size >= 2) args[1] else null)
+                    "c" -> Create().execute()
                     "s" -> Status().execute()
                     "?" -> {
-                        println("隐藏指令：")
+                        println("隐藏命令：")
+                        println("  t: 验证所有版本文件")
                         println("  combine: 合并历史更新包")
                         println("  restore: 还原工作空间目录(workspace)的修改")
                         println("  revert: 还原历史目录(history)的修改")
                         println("  clear: 删除所有历史版本")
-                        println("  t: 验证所有版本文件")
                     }
                     "combine" -> Combine().execute()
                     "restore" -> Restore().execute()
@@ -65,26 +74,18 @@ object McPatchManage
                         if (input.isNotEmpty())
                         {
                             println("$input 不是一个命令")
-                            if (interactiveMode)
-                                Input.readAnyString()
                         } else {
-                            println()
+                            noMenu = false
                         }
-
-                        continue
                     }
                 }
+
                 exitCode = 0
             } catch (e: McPatchManagerException) {
                 exitCode = 1
                 println(e.message)
             }
-
-            System.gc()
-
-            if (interactiveMode)
-                Input.readAnyString()
-        } while (interactiveMode)
+        }
 
         exitProcess(exitCode)
     }
