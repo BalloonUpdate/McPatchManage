@@ -2,7 +2,7 @@ package mcpatch.editor
 
 import mcpatch.utils.File2
 
-class TextFileEditor(val file: File2) : AutoCloseable
+class TextFileEditor(val file: File2)
 {
     /**
      * 获取文件内容
@@ -26,7 +26,7 @@ class TextFileEditor(val file: File2) : AutoCloseable
         file.create()
     }
 
-    fun open()
+    fun create()
     {
         file.create()
     }
@@ -36,7 +36,7 @@ class TextFileEditor(val file: File2) : AutoCloseable
         file.content = text
     }
 
-    override fun close()
+    fun delete()
     {
         file.delete()
     }

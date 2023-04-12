@@ -177,7 +177,7 @@ class Create
         val patchFile = outputD + "$version.mcpatch.zip"
         val tempPatchFile = patchFile.parent + (patchFile.name + ".temporal.zip")
 
-        changelogs.open()
+        changelogs.create()
 
         // 计算预计内存消耗
         val totalMemory = (diff.missingFiles.sumOf {
@@ -289,7 +289,7 @@ class Create
         tempPatchFile.delete()
 
         // 删除更新记录文件
-        changelogs.close()
+        changelogs.clear()
 
         // 更新版本号
         val versions2 = versionL.read()
