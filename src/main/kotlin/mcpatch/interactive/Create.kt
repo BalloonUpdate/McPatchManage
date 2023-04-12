@@ -20,6 +20,7 @@ import mcpatch.extension.StreamExtension.copyAmountTo
 import mcpatch.utils.File2
 import mcpatch.utils.HashUtils
 import mcpatch.utils.MiscUtils
+import mcpatch.utils.PathUtils
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.apache.tools.bzip2.CBZip2OutputStream
@@ -214,13 +215,13 @@ class Create
             val archive = ZipArchiveOutputStream(tempFile2)
             archive.encoding = "utf-8"
 
-            val versionMeta = VersionData()
+            val meta = VersionData()
 
-            versionMeta.moveFiles.addAll(diff.moveFiles.map { MoveFile(it.first, it.second) })
-            versionMeta.oldFiles.addAll(diff.redundantFiles)
-            versionMeta.oldFolders.addAll(diff.redundantFolders)
-            versionMeta.newFolders.addAll(diff.missingFolders)
-            versionMeta.changeLogs = changelogs.get() ?: ""
+            meta.moveFiles.addAll(diff.moveFiles.map { MoveFile(it.first, it.second) })
+            meta.oldFiles.addAll(diff.redundantFiles)
+            meta.oldFolders.addAll(diff.redundantFolders)
+            meta.newFolders.addAll(diff.missingFolders)
+            meta.changeLogs = changelogs.get() ?: ""
 
             // 写出文件更新数据
             if (diff.missingFiles.isNotEmpty())
@@ -229,20 +230,17 @@ class Create
                     for ((index, newFile) in diff.missingFiles.withIndex())
                     {
                         sharedBuf.reset()
-                        versionMeta.newFiles.add(packFile(workspaceD, historyD, diff, sharedBuf, archive, index, newFile))
+                        meta.newFiles.add(packFile(workspaceD, historyD, diff, sharedBuf, archive, index, newFile))
                     }
                 }
             }
 
             // 全量包在安装之前会删除所有跟踪的文件，已达到强制更新的目的
             if (isFull)
-            {
-                versionMeta.oldFolders.addAll(diff.missingFolders)
-                versionMeta.oldFiles.addAll(diff.missingFiles)
-            }
+                meta.oldFiles.addAll(diff.missingFiles)
 
             // 写出元数据
-            val bytes = versionMeta.serializeToJson().toString(4).encodeToByteArray()
+            val bytes = meta.serializeToJson().toString(4).encodeToByteArray()
             val entry = ZipArchiveEntry(".mcpatch-meta.json")
             entry.size = bytes.size.toLong()
             archive.putArchiveEntry(entry)
