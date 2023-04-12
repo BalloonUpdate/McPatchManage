@@ -42,7 +42,7 @@ object McPatchManage
             try {
                 when(val input = if (!interactiveMode) args[0] else Input.readAnyString())
                 {
-                    "c" -> Create().execute(if (args.size >= 2) args[1] else "")
+                    "c" -> Create().execute(if (args.size >= 2) args[1] else null)
                     "t" -> Test().execute()
                     "?" -> {
                         println("隐藏指令：")
