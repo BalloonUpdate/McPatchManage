@@ -7,6 +7,7 @@ import mcpatch.core.VersionList
 import mcpatch.editor.TextFileEditor
 import mcpatch.exception.McPatchManagerException
 import mcpatch.extension.FileExtension.bufferedOutputStream
+import org.apache.commons.compress.archivers.zip.ZipFile
 
 class Combine
 {
@@ -51,7 +52,7 @@ class Combine
             if (!patchFile.exists)
                 throw McPatchManagerException("版本 ${patchFile.path} 的数据文件丢失或者不存在，版本合并失败")
 
-            val reader = PatchFileReader(version, patchFile)
+            val reader = PatchFileReader(version, ZipFile(patchFile.file, "utf-8"))
 
             changelogList.add(reader.meta.changeLogs)
 
@@ -62,9 +63,9 @@ class Combine
 
             for ((index, entry) in reader.withIndex())
             {
-                println("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.newFile.path}")
+                println("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.meta.path}")
 
-                val file = workspace + entry.newFile.path
+                val file = workspace + entry.meta.path
 
                 file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
             }

@@ -42,17 +42,11 @@ abstract class ComparableFile
      */
     abstract val relativePath: String
 
-    /**
-     * 删除一个文件
-     * @param relativePath 相对路径
-     */
-    abstract fun removeFile(relativePath: String);
-
-    /**
-     * 获取子文件（仅目录支持这个方法）
-     */
-    abstract operator fun get(path: String): ComparableFile?
-
+//    /**
+//     * 删除一个文件
+//     * @param relativePath 相对路径
+//     */
+//    abstract fun removeFile(relativePath: String);
 
     /**
      * 获取相对路径下的文件
@@ -60,7 +54,7 @@ abstract class ComparableFile
      * @return 文件，如果找不到返回null
      * @throws InvalidObjectException 如果当前对象不是一个目录
      */
-    protected fun getFileInternal(path: String): ComparableFile?
+    fun find(path: String): ComparableFile?
     {
         if (isFile)
             throw InvalidObjectException("the file named '$name' is not a directory, is a file.")

@@ -18,13 +18,16 @@ class DirectoryDiff
      * 计算variable目录要变成到invariable目录之间的所有文件改动
      * @param variable 改动目录
      * @param invariable 参照目录
+     * @param fileMovingSupport 启用文件移动支持
      * @return 有无差异
      */
-    fun compare(variable: List<ComparableFile>, invariable: List<ComparableFile>): Boolean
+    fun compare(variable: List<ComparableFile>, invariable: List<ComparableFile>, fileMovingSupport: Boolean): Boolean
     {
         findMissings(invariable, variable)
         findRedundants(invariable, variable)
-        detectFileMovings(invariable, variable)
+
+        if (fileMovingSupport)
+            detectFileMovings(invariable, variable)
 
         totalDiff = missingFolders.size + missingFiles.size + redundantFolders.size + redundantFiles.size + moveFiles.size
         return totalDiff > 0
@@ -145,7 +148,7 @@ class DirectoryDiff
             if (index == -1)
                 return root
 
-            return root[path.substring(index + 1)]!!
+            return root.find(path.substring(index + 1))!!
         }
 
         val hashCachesI = mutableMapOf<String, String>()

@@ -17,12 +17,13 @@ import mcpatch.extension.FileExtension.bufferedInputStream
 import mcpatch.extension.FileExtension.bufferedOutputStream
 import mcpatch.extension.RuntimeExtension.usedMemory
 import mcpatch.extension.StreamExtension.copyAmountTo
+import mcpatch.stream.MemoryOutputStream
 import mcpatch.utils.File2
 import mcpatch.utils.HashUtils
 import mcpatch.utils.MiscUtils
-import mcpatch.utils.PathUtils
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
+import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.tools.bzip2.CBZip2OutputStream
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
@@ -30,16 +31,12 @@ import kotlin.math.max
 class Create
 {
     private fun packFile(
-        workspaceD: File2,
-        historyD: File2,
-        diff: DirectoryDiff,
-        sharedBuf: ByteArrayOutputStream,
+        old: File2,
+        new: File2,
+        sharedBuf: MemoryOutputStream,
         output: ZipArchiveOutputStream,
-        index: Int,
-        newFile: String
+        path: String
     ): NewFile {
-        val old = historyD + newFile
-        val new = workspaceD + newFile
         val newLen = if (new.exists) new.length else 0
         val oldLen = if (old.exists) old.length else 0
         val case = old.name != new.name && old.name.equals(new.name, ignoreCase = true)
@@ -48,11 +45,6 @@ class Create
             (oldLen == 0L && newLen > 0) || case -> ModificationMode.Fill
             else -> ModificationMode.Modify
         }
-
-        if (max(oldLen, newLen) > Int.MAX_VALUE.toLong() - 1)
-            throw McPatchManagerException("暂时不支持打包大小超过2GB的文件： $newFile")
-
-        println("打包文件(${index + 1}/${diff.missingFiles.size}) $newFile")
 
         when (mode)
         {
@@ -72,14 +64,14 @@ class Create
                     bzip.flush()
 
                     // 写出数据
-                    val entry = ZipArchiveEntry(newFile)
+                    val entry = ZipArchiveEntry(path)
                     entry.size = sharedBuf.size().toLong()
                     output.putArchiveEntry(entry)
                     sharedBuf.writeTo(output)
                     output.closeArchiveEntry()
 
                     return NewFile(
-                        path = newFile,
+                        path = path,
                         mode = mode,
                         oldHash = "",
                         newHash = HashUtils.sha1(new.file),
@@ -91,7 +83,7 @@ class Create
             }
 
             ModificationMode.Empty -> {
-                return NewFile(newFile, mode, "", "", "", "", 0)
+                return NewFile(path, mode, "", "", "", "", 0)
             }
 
             ModificationMode.Modify -> { // 计算差异
@@ -111,14 +103,14 @@ class Create
                         bzip.flush()
 
                         // 写出数据
-                        val entry = ZipArchiveEntry(newFile)
+                        val entry = ZipArchiveEntry(path)
                         entry.size = sharedBuf.size().toLong()
                         output.putArchiveEntry(entry)
                         sharedBuf.writeTo(output)
                         output.closeArchiveEntry()
 
                         return NewFile(
-                            path = newFile,
+                            path = path,
                             mode = mode,
                             oldHash = HashUtils.sha1(old.file),
                             newHash = HashUtils.sha1(new.file),
@@ -146,7 +138,7 @@ class Create
         val workspace = RealFile.CreateFromRealFile(workspaceD)
         val history = RealFile.CreateFromRealFile(historyD)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(history.files, workspace.files)
+        val hasDiff = diff.compare(history.files, workspace.files, true)
 
         if (hasDiff)
         {
@@ -226,11 +218,22 @@ class Create
             // 写出文件更新数据
             if (diff.missingFiles.isNotEmpty())
             {
-                ByteArrayOutputStream().use { sharedBuf ->
-                    for ((index, newFile) in diff.missingFiles.withIndex())
+                MemoryOutputStream().use { sharedBuf ->
+                    for ((index, path) in diff.missingFiles.withIndex())
                     {
                         sharedBuf.reset()
-                        meta.newFiles.add(packFile(workspaceD, historyD, diff, sharedBuf, archive, index, newFile))
+
+                        val old = historyD + path
+                        val new = workspaceD + path
+                        val newLen = if (new.exists) new.length else 0
+                        val oldLen = if (old.exists) old.length else 0
+
+                        println("打包文件(${index + 1}/${diff.missingFiles.size}) $path")
+
+                        if (max(newLen, oldLen) > Int.MAX_VALUE.toLong() - 1)
+                            throw McPatchManagerException("暂时不支持打包大小超过2GB的文件： $path")
+
+                        meta.newFiles.add(packFile(old, new, sharedBuf, archive, path))
                     }
                 }
             }
@@ -257,11 +260,11 @@ class Create
 
         // 校验更新包
         try {
-            PatchFileReader(version, tempPatchFile).use { reader ->
+            PatchFileReader(version, ZipFile(tempPatchFile.file, "utf-8")).use { reader ->
                 val buf = ByteArrayOutputStream()
                 for ((index, entry) in reader.withIndex())
                 {
-                    println("验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.newFile.path}")
+                    println("验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.meta.path}")
                     buf.reset()
                     entry.copyTo(buf)
                 }

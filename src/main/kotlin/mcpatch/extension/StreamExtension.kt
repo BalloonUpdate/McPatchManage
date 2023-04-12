@@ -1,12 +1,11 @@
 package mcpatch.extension
 
-import java.io.BufferedInputStream
 import java.io.InputStream
 import java.io.OutputStream
 
 object StreamExtension
 {
-    fun BufferedInputStream.actuallySkip(n: Long)
+    fun InputStream.actuallySkip(n: Long)
     {
         var remains = n
         while (remains > 0)
@@ -29,6 +28,9 @@ object StreamExtension
         buffer: Int = 128 * 1024,
         callback: ((copied: Long, total: Long) -> Unit)? = null
     ): Long {
+        if (amount == 0L)
+            return 0L
+
         var bytesCopied: Long = 0
         val buf = ByteArray(buffer)
 

@@ -174,4 +174,9 @@ class File2 : Iterable<File2>
     {
         return (this + value).exists
     }
+
+    override fun toString(): String
+    {
+        return file.absolutePath
+    }
 }

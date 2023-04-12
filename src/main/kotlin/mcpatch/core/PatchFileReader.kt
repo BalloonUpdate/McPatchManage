@@ -16,9 +16,8 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 
-class PatchFileReader(val version: String, val file: File2) : Iterable<PatchFileReader.PatchEntry>, AutoCloseable
+class PatchFileReader(val version: String, val archive: ZipFile) : Iterable<PatchFileReader.PatchEntry>, AutoCloseable
 {
-    val archive = ZipFile(file.file, "utf-8")
     val meta: VersionData
 
     init {
@@ -49,9 +48,9 @@ class PatchFileReader(val version: String, val file: File2) : Iterable<PatchFile
         override fun next(): PatchEntry = PatchEntry(reader, iter.next())
     }
 
-    class PatchEntry(private val reader: PatchFileReader, val newFile: NewFile)
+    class PatchEntry(private val reader: PatchFileReader, val meta: NewFile)
     {
-        val mode = newFile.mode
+        val mode = meta.mode
 
         fun hasData(): Boolean
         {
@@ -63,25 +62,27 @@ class PatchFileReader(val version: String, val file: File2) : Iterable<PatchFile
             if (!hasData())
                 return EmptyInputStream()
 
-            val entry = reader.archive.getEntry(newFile.path) ?: throw McPatchManagerException("[${reader.version}] 找不到文件数据: $newFile")
+            val entry = reader.archive.getEntry(meta.path) ?: throw McPatchManagerException("[${reader.version}] 找不到文件数据: $meta")
 
             val entryStream = reader.archive.getInputStream(entry)
+
             val bzipped = SHA1CheckInputStream(entryStream)
-            val unbzipped = SHA1CheckInputStream(CBZip2InputStream(bzipped))
+            val intermediate = CBZip2InputStream(bzipped)
+            val unbzipped = SHA1CheckInputStream(intermediate)
 
-            return ActionedInputStream(unbzipped, newFile.rawLength.toInt()) {
-                if (bzipped.digest() != newFile.bzippedHash)
-                    throw McPatchManagerException("[${reader.version}] 更新包中 ${newFile.path} 文件的数据（bzipped）无法通过验证")
+            return ActionedInputStream(unbzipped, meta.rawLength.toInt()) {
+                if (bzipped.digest() != meta.bzippedHash)
+                    throw McPatchManagerException("[${reader.version}] 更新包中 ${meta.path} 文件的数据（bzipped）无法通过验证")
 
-                if (unbzipped.digest() != newFile.rawHash)
-                    throw McPatchManagerException("[${reader.version}] 更新包中 ${newFile.path} 文件的数据（unbzipped）无法通过验证")
+                if (unbzipped.digest() != meta.rawHash)
+                    throw McPatchManagerException("[${reader.version}] 更新包中 ${meta.path} 文件的数据（unbzipped）无法通过验证")
             }
         }
 
         fun copyTo(output: OutputStream)
         {
             val input = getInputStream()
-            input.copyAmountTo(output, newFile.rawLength)
+            input.copyAmountTo(output, meta.rawLength)
         }
     }
 }

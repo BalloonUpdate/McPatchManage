@@ -13,7 +13,7 @@ class Status
         val workspace = RealFile.CreateFromRealFile(McPatchManage.workspaceDir)
         val history = RealFile.CreateFromRealFile(McPatchManage.historyDir)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(history.files, workspace.files)
+        val hasDiff = diff.compare(history.files, workspace.files, true)
 
         if (hasDiff)
         {
