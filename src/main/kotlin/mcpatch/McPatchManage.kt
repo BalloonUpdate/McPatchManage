@@ -31,30 +31,35 @@ object McPatchManage
 
         do
         {
-            println("主菜单: (输入字母执行命令)")
-            println("  c: 创建新版本 (最新版本为 ${versionList.getNewest()} )")
-            println("  t: 验证所有版本文件")
-            println("  ?: 查看隐藏指令")
-            println("  q: 退出")
-            print("> ")
-            System.out.flush()
+            if (interactiveMode)
+            {
+                println("主菜单: (输入字母执行命令)")
+                println("  c: 创建新版本 (最新版本为 ${versionList.getNewest()} )")
+                println("  s: 检查文件修改状态")
+                println("  ?: 查看隐藏指令")
+                println("  q: 退出")
+                print("> ")
+                System.out.flush()
+            }
 
             try {
                 when(val input = if (!interactiveMode) args[0] else Input.readAnyString())
                 {
                     "c" -> Create().execute(if (args.size >= 2) args[1] else null)
-                    "t" -> Test().execute()
+                    "s" -> Status().execute()
                     "?" -> {
                         println("隐藏指令：")
                         println("  combine: 合并历史更新包")
                         println("  restore: 还原工作空间目录(workspace)的修改")
                         println("  revert: 还原历史目录(history)的修改")
                         println("  clear: 删除所有历史版本")
+                        println("  t: 验证所有版本文件")
                     }
                     "combine" -> Combine().execute()
                     "restore" -> Restore().execute()
                     "revert" -> Revert().execute()
                     "clear" -> Clear().execute()
+                    "t" -> Test().execute()
                     "q" -> break
                     else -> {
                         if (input.isNotEmpty())
@@ -81,8 +86,6 @@ object McPatchManage
                 Input.readAnyString()
         } while (interactiveMode)
 
-        println("结束运行")
-        Thread.sleep(1500)
         exitProcess(exitCode)
     }
 }
