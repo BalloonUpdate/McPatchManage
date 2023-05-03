@@ -1,5 +1,6 @@
 package mcpatch.interactive
 
+import mcpatch.McPatchManage
 import mcpatch.McPatchManage.historyDir
 import mcpatch.McPatchManage.workspaceDir
 import mcpatch.diff.DirectoryDiff
@@ -15,7 +16,7 @@ class Restore
         val workspace = RealFile.CreateFromRealFile(workspaceDir)
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(workspace.files, history.files, true)
+        val hasDiff = diff.compare(workspace.files, history.files, McPatchManage.ignorefile.read(), true)
 
         if (hasDiff)
         {

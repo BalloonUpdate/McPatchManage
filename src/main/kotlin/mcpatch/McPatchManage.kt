@@ -1,5 +1,6 @@
 package mcpatch
 
+import mcpatch.core.IgnoreFile
 import mcpatch.core.Input
 import mcpatch.core.VersionList
 import mcpatch.exception.McPatchManagerException
@@ -17,6 +18,7 @@ object McPatchManage
     val publicDir = workdir + "public"
     val combineDir = workdir + "combining"
     val versionList = VersionList(workdir + "public/versions.txt")
+    val ignorefile = IgnoreFile(workdir + "ignores.txt")
 
     @JvmStatic
     fun main(args: Array<String>)

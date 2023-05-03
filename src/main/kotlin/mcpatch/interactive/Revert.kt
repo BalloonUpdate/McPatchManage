@@ -62,7 +62,7 @@ class Revert
         val workspace = RealFile.CreateFromRealFile(McPatchManage.workspaceDir)
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
-        diff.compare(workspace.files, history.files, true)
+        diff.compare(workspace.files, history.files, McPatchManage.ignorefile.read(), true)
         workspace.syncFrom(diff, historyDir)
 
         println("所有目录已经还原！")

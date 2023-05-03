@@ -21,10 +21,15 @@ class DirectoryDiff
      * @param fileMovingSupport 启用文件移动支持
      * @return 有无差异
      */
-    fun compare(variable: List<ComparableFile>, invariable: List<ComparableFile>, fileMovingSupport: Boolean): Boolean
+    fun compare(variable: List<ComparableFile>, invariable: List<ComparableFile>, ignores: List<String>, fileMovingSupport: Boolean): Boolean
     {
         findMissings(invariable, variable)
         findRedundants(invariable, variable)
+
+        missingFolders.removeIf { ignores.any { i -> it.startsWith(i) } }
+        missingFiles.removeIf { ignores.any { i -> it.startsWith(i) } }
+        redundantFolders.removeIf { ignores.any { i -> it.startsWith(i) } }
+        redundantFiles.removeIf { ignores.any { i -> it.startsWith(i) } }
 
         if (fileMovingSupport)
             detectFileMovings(invariable, variable)

@@ -138,7 +138,7 @@ class Create
         val workspace = RealFile.CreateFromRealFile(workspaceD)
         val history = RealFile.CreateFromRealFile(historyD)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(history.files, workspace.files, true)
+        val hasDiff = diff.compare(history.files, workspace.files, McPatchManage.ignorefile.read(), true)
 
         if (hasDiff)
         {
