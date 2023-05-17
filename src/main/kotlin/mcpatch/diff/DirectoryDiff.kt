@@ -181,17 +181,18 @@ class DirectoryDiff
             }
         }
 
-        val ambgious = mutableListOf<String>()
+        // 把同时移动的文件当做普通文件处理，而非移动的文件
+        val ambiguous = mutableListOf<String>()
         val appeareds = mutableListOf<String>()
         for (moving in moveFiles)
         {
-            if (moving.first in appeareds && moving.first !in ambgious)
-                ambgious.add(moving.first)
+            if (moving.first in appeareds && moving.first !in ambiguous)
+                ambiguous.add(moving.first)
 
             appeareds.add(moving.first)
         }
 
-        moveFiles.removeIf { ambgious.any { a -> a == it.first } }
+        moveFiles.removeIf { ambiguous.any { a -> a == it.first } }
 
         missingFiles.removeIf { moveFiles.any { m -> m.second == it } }
         redundantFiles.removeIf { moveFiles.any { m -> m.first == it } }
