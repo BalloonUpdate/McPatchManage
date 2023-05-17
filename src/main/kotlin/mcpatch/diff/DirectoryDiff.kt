@@ -181,6 +181,18 @@ class DirectoryDiff
             }
         }
 
+        val ambgious = mutableListOf<String>()
+        val appeareds = mutableListOf<String>()
+        for (moving in moveFiles)
+        {
+            if (moving.first in appeareds && moving.first !in ambgious)
+                ambgious.add(moving.first)
+
+            appeareds.add(moving.first)
+        }
+
+        moveFiles.removeIf { ambgious.any { a -> a == it.first } }
+
         missingFiles.removeIf { moveFiles.any { m -> m.second == it } }
         redundantFiles.removeIf { moveFiles.any { m -> m.first == it } }
     }
