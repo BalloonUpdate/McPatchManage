@@ -18,6 +18,7 @@ class DirectoryDiff
      * 计算variable目录要变成到invariable目录之间的所有文件改动
      * @param variable 改动目录
      * @param invariable 参照目录
+     * @param ignores 要被忽略的文件列表
      * @param fileMovingSupport 启用文件移动支持
      * @return 有无差异
      */
@@ -26,11 +27,13 @@ class DirectoryDiff
         findMissings(invariable, variable)
         findRedundants(invariable, variable)
 
+        // 处理文件忽略
         missingFolders.removeIf { ignores.any { i -> it.startsWith(i) } }
         missingFiles.removeIf { ignores.any { i -> it.startsWith(i) } }
         redundantFolders.removeIf { ignores.any { i -> it.startsWith(i) } }
         redundantFiles.removeIf { ignores.any { i -> it.startsWith(i) } }
 
+        // 处理文件移动
         if (fileMovingSupport)
             detectFileMovings(invariable, variable)
 
@@ -198,20 +201,29 @@ class DirectoryDiff
         redundantFiles.removeIf { moveFiles.any { m -> m.first == it } }
     }
 
-    override fun toString(): String
+    override fun toString(): String = toString(null)
+
+    fun toString(overwrites: List<String>? = null): String
     {
         return buildString {
             for (f in redundantFolders)
                 append("旧目录: $f\n")
 
             for (f in missingFolders)
-                append("新目录: $f\n")
+                append("新目录: $f")
 
             for (f in redundantFiles)
-                append("旧文件: $f\n")
+                append("旧文件: $f")
 
             for (f in missingFiles)
-                append("新文件: $f\n")
+            {
+                append("新文件: $f")
+
+                if (overwrites != null && f in overwrites)
+                    append(" （强制覆盖）")
+
+                append("\n")
+            }
 
             for ((from, to) in moveFiles)
                 append("移动文件: $from => $to\n")

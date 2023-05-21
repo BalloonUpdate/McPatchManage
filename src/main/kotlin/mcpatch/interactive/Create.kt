@@ -35,16 +35,21 @@ class Create
         new: File2,
         sharedBuf: MemoryOutputStream,
         output: ZipArchiveOutputStream,
-        path: String
+        path: String,
+        overwrite: Boolean,
     ): NewFile {
         val newLen = if (new.exists) new.length else 0
         val oldLen = if (old.exists) old.length else 0
         val case = old.name != new.name && old.name.equals(new.name, ignoreCase = true)
-        val mode = when {
+        var mode = when {
             newLen == 0L -> ModificationMode.Empty
             (oldLen == 0L && newLen > 0) || case -> ModificationMode.Fill
             else -> ModificationMode.Modify
         }
+
+        // 处理文件覆盖
+        if (overwrite && mode == ModificationMode.Modify)
+            mode = ModificationMode.Fill
 
         when (mode)
         {
@@ -143,7 +148,7 @@ class Create
         if (hasDiff)
         {
             println("----------以下为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
-            println(diff)
+            println(diff.toString(McPatchManage.overwritefile.read()))
             println("----------以上为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
         } else {
             println("没有任何文件改动，即将创建一个空版本")
@@ -219,6 +224,8 @@ class Create
             if (diff.missingFiles.isNotEmpty())
             {
                 MemoryOutputStream().use { sharedBuf ->
+                    val overwrites = McPatchManage.overwritefile.read()
+
                     for ((index, path) in diff.missingFiles.withIndex())
                     {
                         sharedBuf.reset()
@@ -227,13 +234,14 @@ class Create
                         val new = workspaceD + path
                         val newLen = if (new.exists) new.length else 0
                         val oldLen = if (old.exists) old.length else 0
+                        val overwrite = path in overwrites
 
                         println("打包文件(${index + 1}/${diff.missingFiles.size}) $path")
 
                         if (max(newLen, oldLen) > Int.MAX_VALUE.toLong() - 1)
                             throw McPatchManagerException("暂时不支持打包大小超过2GB的文件： $path")
 
-                        meta.newFiles.add(packFile(old, new, sharedBuf, archive, path))
+                        meta.newFiles.add(packFile(old, new, sharedBuf, archive, path, overwrite))
                     }
                 }
             }

@@ -18,7 +18,7 @@ class Status
         if (hasDiff)
         {
             println("----------以下为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
-            println(diff)
+            println(diff.toString(McPatchManage.overwritefile.read()))
             println("----------以上为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
         } else {
             println("没有任何文件改动")

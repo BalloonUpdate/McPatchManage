@@ -2,6 +2,7 @@ package mcpatch
 
 import mcpatch.core.IgnoreFile
 import mcpatch.core.Input
+import mcpatch.core.OverwriteFile
 import mcpatch.core.VersionList
 import mcpatch.exception.McPatchManagerException
 import mcpatch.interactive.*
@@ -19,6 +20,7 @@ object McPatchManage
     val combineDir = workdir + "combining"
     val versionList = VersionList(workdir + "public/versions.txt")
     val ignorefile = IgnoreFile(workdir + "ignores.txt")
+    val overwritefile = OverwriteFile(workdir + "overwrites.txt")
 
     @JvmStatic
     fun main(args: Array<String>)

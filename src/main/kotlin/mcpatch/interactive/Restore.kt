@@ -21,7 +21,7 @@ class Restore
         if (hasDiff)
         {
             println("----------即将还原以下所有文件修改（共 ${diff.totalDiff} 处文件变动）----------")
-            println(diff)
+            println(diff.toString(McPatchManage.overwritefile.read()))
             println("----------即将还原以上所有文件修改（共 ${diff.totalDiff} 处文件变动）----------")
         } else {
             println("工作空间目录(workspace)没有任何改动，不需要还原")
