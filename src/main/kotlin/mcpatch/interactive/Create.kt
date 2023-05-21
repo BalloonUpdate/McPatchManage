@@ -26,6 +26,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.tools.bzip2.CBZip2OutputStream
 import java.io.ByteArrayOutputStream
+import java.util.*
 import kotlin.math.max
 
 class Create
@@ -153,6 +154,21 @@ class Create
         } else {
             println("没有任何文件改动，即将创建一个空版本")
         }
+
+        // 检测仅修改大小写的问题
+        val mfs = diff.missingFiles.map { it.lowercase(Locale.getDefault()) }.toList()
+        val nfs = diff.redundantFiles .map { it.lowercase(Locale.getDefault()) }.toList()
+        val collided = mfs.firstOrNull { it in nfs }
+
+        if (collided != null)
+            throw McPatchManagerException("无法打包仅修改大小写文件名的文件：$collided")
+
+        val ff1 = diff.moveFiles.map { it.first.lowercase(Locale.getDefault()) }.toList()
+        val tf1 = diff.moveFiles.map { it.second.lowercase(Locale.getDefault()) }.toList()
+        val collided1 = ff1.firstOrNull { it in tf1 }
+        if (collided1 != null)
+            throw McPatchManagerException("无法打包仅修改大小写文件名的文件：$collided1")
+
 
         // 提示输入版本号
         println("输入你要创建的版本号名称，目前最新版本号为 ${versionL.getNewest()}")

@@ -210,10 +210,10 @@ class DirectoryDiff
                 append("旧目录: $f\n")
 
             for (f in missingFolders)
-                append("新目录: $f")
+                append("新目录: $f\n")
 
             for (f in redundantFiles)
-                append("旧文件: $f")
+                append("旧文件: $f\n")
 
             for (f in missingFiles)
             {
