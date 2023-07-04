@@ -20,6 +20,7 @@ repositories {
 
 dependencies {
     implementation(files("libs/apache-ant-1.10.12.jar"))
+    implementation("com.hrakaroo:glob:0.9.0")
     implementation("org.json:json:20220924")
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.apache.commons:commons-compress:1.23.0")

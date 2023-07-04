@@ -1,5 +1,7 @@
 package mcpatch.diff
 
+import mcpatch.core.IgnoreFile
+import mcpatch.core.OverwriteFile
 import mcpatch.utils.PathUtils
 
 /**
@@ -18,20 +20,21 @@ class DirectoryDiff
      * 计算variable目录要变成到invariable目录之间的所有文件改动
      * @param variable 改动目录
      * @param invariable 参照目录
-     * @param ignores 要被忽略的文件列表
+     * @param ignoresfile 要被忽略的文件列表
      * @param fileMovingSupport 启用文件移动支持
      * @return 有无差异
      */
-    fun compare(variable: List<ComparableFile>, invariable: List<ComparableFile>, ignores: List<String>, fileMovingSupport: Boolean): Boolean
+    fun compare(variable: List<ComparableFile>, invariable: List<ComparableFile>, ignoresfile: IgnoreFile, fileMovingSupport: Boolean): Boolean
     {
         findMissings(invariable, variable)
         findRedundants(invariable, variable)
 
         // 处理文件忽略
-        missingFolders.removeIf { ignores.any { i -> it.startsWith(i) } }
-        missingFiles.removeIf { ignores.any { i -> it.startsWith(i) } }
-        redundantFolders.removeIf { ignores.any { i -> it.startsWith(i) } }
-        redundantFiles.removeIf { ignores.any { i -> it.startsWith(i) } }
+        ignoresfile.reload()
+        missingFolders.removeIf { it in ignoresfile }
+        missingFiles.removeIf { it in ignoresfile }
+        redundantFolders.removeIf { it in ignoresfile }
+        redundantFiles.removeIf { it in ignoresfile }
 
         // 处理文件移动
         if (fileMovingSupport)
@@ -203,8 +206,10 @@ class DirectoryDiff
 
     override fun toString(): String = toString(null)
 
-    fun toString(overwrites: List<String>? = null): String
+    fun toString(overwrites: OverwriteFile? = null): String
     {
+        overwrites?.reload()
+
         return buildString {
             for (f in redundantFolders)
                 append("旧目录: $f\n")

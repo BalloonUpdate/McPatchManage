@@ -16,12 +16,12 @@ class Restore
         val workspace = RealFile.CreateFromRealFile(workspaceDir)
         val history = RealFile.CreateFromRealFile(historyDir)
         val diff = DirectoryDiff()
-        val hasDiff = diff.compare(workspace.files, history.files, McPatchManage.ignorefile.read(), true)
+        val hasDiff = diff.compare(workspace.files, history.files, McPatchManage.ignorefile, true)
 
         if (hasDiff)
         {
             println("----------即将还原以下所有文件修改（共 ${diff.totalDiff} 处文件变动）----------")
-            println(diff.toString(McPatchManage.overwritefile.read()))
+            println(diff.toString(McPatchManage.overwritefile))
             println("----------即将还原以上所有文件修改（共 ${diff.totalDiff} 处文件变动）----------")
         } else {
             println("工作空间目录(workspace)没有任何改动，不需要还原")
