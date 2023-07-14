@@ -17,6 +17,7 @@ import mcpatch.extension.FileExtension.bufferedInputStream
 import mcpatch.extension.FileExtension.bufferedOutputStream
 import mcpatch.extension.RuntimeExtension.usedMemory
 import mcpatch.extension.StreamExtension.copyAmountTo
+import mcpatch.logging.Log
 import mcpatch.stream.MemoryOutputStream
 import mcpatch.utils.File2
 import mcpatch.utils.HashUtils
@@ -139,7 +140,7 @@ class Create
         changelogs: TextFileEditor,
         versionSpecified: String? = null
     ) {
-        println("正在计算文件修改，可能需要一点时间")
+        Log.info("正在计算文件修改，可能需要一点时间")
 
         val workspace = RealFile.CreateFromRealFile(workspaceD)
         val history = RealFile.CreateFromRealFile(historyD)
@@ -148,11 +149,11 @@ class Create
 
         if (hasDiff)
         {
-            println("----------以下为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
-            println(diff.toString(McPatchManage.overwritefile))
-            println("----------以上为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
+            Log.info("----------以下为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
+            Log.info(diff.toString(McPatchManage.overwritefile))
+            Log.info("----------以上为文件修改列表（共 ${diff.totalDiff} 处文件改动）----------")
         } else {
-            println("没有任何文件改动，即将创建一个空版本")
+            Log.info("没有任何文件改动，即将创建一个空版本")
         }
 
         // 检测仅修改大小写的问题
@@ -171,7 +172,7 @@ class Create
 
 
         // 提示输入版本号
-        println("输入你要创建的版本号名称，目前最新版本号为 ${versionL.getNewest()}")
+        Log.info("输入你要创建的版本号名称，目前最新版本号为 ${versionL.getNewest()}")
         val version = versionSpecified ?: Input.readAnyString().trim()
 
         if (version.isEmpty())
@@ -185,7 +186,7 @@ class Create
 
         val isFull = versions.isEmpty()
         if (isFull)
-            println("提示：版本 $version 是第一个版本，会被打包成全量更新包，后续的更新包会以增量形式进行打包")
+            Log.info("提示：版本 $version 是第一个版本，会被打包成全量更新包，后续的更新包会以增量形式进行打包")
 
         // 准备创建版本
         val patchFile = outputD + "$version.mcpatch.zip"
@@ -206,13 +207,13 @@ class Create
         // 给出提示信息
         val ramRequired = MiscUtils.convertBytes(totalMemory)
         val ramAvaliable = MiscUtils.convertBytes(Runtime.getRuntime().maxMemory())
-        println("打包过程预计消耗内存: $ramRequired, JVM总可用内存为: $ramAvaliable")
+        Log.info("打包过程预计消耗内存: $ramRequired, JVM总可用内存为: $ramAvaliable")
 
         if (totalMemory > Runtime.getRuntime().maxMemory())
-            println("\n检测到可用内存不足，打包过程可能发生崩溃，请使用JVM参数Xmx调整最大可用内存！\n")
+            Log.info("\n检测到可用内存不足，打包过程可能发生崩溃，请使用JVM参数Xmx调整最大可用内存！\n")
 
-        println("如果有更新记录请在此时粘贴到 changelogs.txt 文件里")
-        println("确定要创建版本 $version 吗? （输入y或者n）")
+        Log.info("如果有更新记录请在此时粘贴到 changelogs.txt 文件里")
+        Log.info("确定要创建版本 $version 吗? （输入y或者n）")
 
         if (versionSpecified == null)
         {
@@ -222,7 +223,7 @@ class Create
 
         // 创建更新包
         val start = System.currentTimeMillis()
-        println("正在创建版本 $version 可能需要一点时间")
+        Log.info("正在创建版本 $version 可能需要一点时间")
 
         tempPatchFile.file.bufferedOutputStream(8 * 1024 * 1024).use { tempFile2 ->
             val archive = ZipArchiveOutputStream(tempFile2)
@@ -253,7 +254,7 @@ class Create
                         val oldLen = if (old.exists) old.length else 0
                         val overwrite = path in overwrites
 
-                        println("打包文件(${index + 1}/${diff.missingFiles.size}) $path")
+                        Log.info("打包文件(${index + 1}/${diff.missingFiles.size}) $path")
 
                         if (max(newLen, oldLen) > Int.MAX_VALUE.toLong() - 1)
                             throw McPatchManagerException("暂时不支持打包大小超过2GB的文件： $path")
@@ -281,7 +282,7 @@ class Create
         if (tempPatchFile.length > Int.MAX_VALUE)
             throw McPatchManagerException("版本 $version 的补丁文件超过了2Gb大小的限制，请将文件分多次更新以绕过此限制")
 
-        println("正在验证 $version 的补丁文件")
+        Log.info("正在验证 $version 的补丁文件")
 
         // 校验更新包
         try {
@@ -289,25 +290,25 @@ class Create
                 val buf = ByteArrayOutputStream()
                 for ((index, entry) in reader.withIndex())
                 {
-                    println("验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.meta.path}")
+                    Log.info("验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.meta.path}")
                     buf.reset()
                     entry.copyTo(buf)
                 }
             }
         } catch (e: McPatchManagerException) {
-            println(e.message)
+            Log.info(e.message!!)
             throw McPatchManagerException("版本 $version 的补丁文件校验失败")
         }
 
-        println("补丁文件验证完成")
+        Log.info("补丁文件验证完成")
 
         if (!skipHistorySync)
         {
             // 同步history
-            println("正在同步文件状态，可能需要一点时间")
+            Log.info("正在同步文件状态，可能需要一点时间")
             history.syncFrom(diff, workspaceD)
         } else {
-            println("已跳过文件状态同步")
+            Log.info("已跳过文件状态同步")
         }
 
         // 合并临时文件
@@ -324,7 +325,7 @@ class Create
 
         // 输出耗时
         val elapse = System.currentTimeMillis() - start
-        println("创建版本 $version 完成，耗时 ${elapse.toFloat() / 1000} 秒")
+        Log.info("创建版本 $version 完成，耗时 ${elapse.toFloat() / 1000} 秒")
     }
 
     fun execute()

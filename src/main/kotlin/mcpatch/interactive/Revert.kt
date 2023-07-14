@@ -9,19 +9,20 @@ import mcpatch.diff.DirectoryDiff
 import mcpatch.diff.RealFile
 import mcpatch.exception.McPatchManagerException
 import mcpatch.extension.FileExtension.bufferedOutputStream
+import mcpatch.logging.Log
 import org.apache.commons.compress.archivers.zip.ZipFile
 
 class Revert
 {
     fun execute()
     {
-        println("即将同时还原工作空间目录(workspace)和历史目录(history)下的内容")
-        println("要继续吗？（输入y或者n）")
+        Log.info("即将同时还原工作空间目录(workspace)和历史目录(history)下的内容")
+        Log.info("要继续吗？（输入y或者n）")
 
         if (!mcpatch.core.Input.readYesOrNot(false))
             throw McPatchManagerException("还原过程中断")
 
-        println("请再次确认！（输入y或者n）")
+        Log.info("请再次确认！（输入y或者n）")
 
         if (!mcpatch.core.Input.readYesOrNot(false))
             throw McPatchManagerException("还原过程中断")
@@ -43,18 +44,18 @@ class Revert
 
             for ((index, entry) in reader.withIndex())
             {
-                println("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.meta.path}")
+                Log.info("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.meta.path}")
 
                 val file = historyDir + entry.meta.path
 
                 file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
             }
 
-            println("[$version] 版本 $version 处理完成")
+            Log.info("[$version] 版本 $version 处理完成")
         }
 
         // 同步workspace目录
-        println("正在同步工作空间")
+        Log.info("正在同步工作空间")
 
         McPatchManage.workspaceDir.delete()
         McPatchManage.workspaceDir.mkdirs()
@@ -65,6 +66,6 @@ class Revert
         diff.compare(workspace.files, history.files, McPatchManage.ignorefile, true)
         workspace.syncFrom(diff, historyDir)
 
-        println("所有目录已经还原！")
+        Log.info("所有目录已经还原！")
     }
 }

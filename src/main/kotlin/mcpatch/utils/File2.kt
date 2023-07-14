@@ -123,6 +123,17 @@ class File2 : Iterable<File2>
             throw RuntimeException("fail to move file from ${file.path} to ${target.path}")
     }
 
+    fun clear()
+    {
+        if(!exists)
+            return
+        if(isDirectory)
+            for (f in files)
+                f.delete()
+        else
+            content = ""
+    }
+
     fun copy(target: File2)
     {
         if(!exists)

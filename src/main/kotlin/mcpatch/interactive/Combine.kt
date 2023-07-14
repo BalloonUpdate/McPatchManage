@@ -7,13 +7,14 @@ import mcpatch.core.VersionList
 import mcpatch.editor.TextFileEditor
 import mcpatch.exception.McPatchManagerException
 import mcpatch.extension.FileExtension.bufferedOutputStream
+import mcpatch.logging.Log
 import org.apache.commons.compress.archivers.zip.ZipFile
 
 class Combine
 {
     fun execute()
     {
-        println("即将进行版本合并操作，请输入要合并的版本数量")
+        Log.info("即将进行版本合并操作，请输入要合并的版本数量")
 
         val input = Input.readInput("\\d+")
 
@@ -28,7 +29,7 @@ class Combine
 
         val combined = versions.take(count)
 
-        println("将要合并这些版本 $combined 要继续吗？（输入y或者n）")
+        Log.info("将要合并这些版本 $combined 要继续吗？（输入y或者n）")
         if (!Input.readYesOrNot(false))
             throw McPatchManagerException("合并过程中断")
 
@@ -63,7 +64,7 @@ class Combine
 
             for ((index, entry) in reader.withIndex())
             {
-                println("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.meta.path}")
+                Log.info("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.meta.path}")
 
                 val file = workspace + entry.meta.path
 
@@ -83,12 +84,12 @@ class Combine
 
         if (changelogList.isNotEmpty())
         {
-            println("请打开 ${changelogs.file.name} 编辑合并后的更新记录，然后按任意键继续")
+            Log.info("请打开 ${changelogs.file.name} 编辑合并后的更新记录，然后按任意键继续")
 
             Input.readAnyString()
         }
 
-        println("请输入 $combined 版本在合并后新的版本号")
+        Log.info("请输入 $combined 版本在合并后新的版本号")
 
         var version: String
 
@@ -98,13 +99,13 @@ class Combine
 
             if (version.isEmpty())
             {
-                println("版本号不能为空，请重新输入")
+                Log.info("版本号不能为空，请重新输入")
                 continue
             }
 
             if (version in McPatchManage.versionList.read().filter { !combined.contains(it) })
             {
-                println("版本号与已有版本号重复，请重新输入")
+                Log.info("版本号与已有版本号重复，请重新输入")
                 continue
             }
 
@@ -113,13 +114,13 @@ class Combine
 
         Create().create(workspace, history, public, true, versionL, changelogs, version)
 
-        println("正在进行收尾工作")
+        Log.info("正在进行收尾工作")
 
         // 生成新的版本号列表
         val existings = McPatchManage.versionList.read()
         existings.removeIf { it in combined }
         val ddd = listOf(version) + existings
-        println(ddd)
+        Log.info(ddd)
         McPatchManage.versionList.write(ddd)
 
         // 删除合并之前的版本文件
@@ -132,6 +133,6 @@ class Combine
 
         McPatchManage.combineDir.delete()
 
-        println("版本合并完成: $combined => $version")
+        Log.info("版本合并完成: $combined => $version")
     }
 }

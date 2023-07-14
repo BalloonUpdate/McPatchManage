@@ -16,7 +16,7 @@ object Input
     /**
      * 设置buf的初始内容
      */
-    fun initInput(text: Array<String>)
+    fun initInput(text: List<String>)
     {
         buf.addAll(text)
     }
