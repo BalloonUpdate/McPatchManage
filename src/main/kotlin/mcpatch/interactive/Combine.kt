@@ -68,6 +68,8 @@ class Combine
 
                 val file = workspace + entry.meta.path
 
+                file.parent.mkdirs()
+
                 file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
             }
         }
