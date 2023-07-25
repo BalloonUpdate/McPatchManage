@@ -1,4 +1,4 @@
-package mcpatch.extension
+package mcpatch.classextension
 
 object RuntimeExtension
 {

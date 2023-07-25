@@ -1,6 +1,6 @@
 package mcpatch.stream
 
-import mcpatch.utils.HashUtils
+import mcpatch.utility.HashUtils
 import java.io.InputStream
 import java.security.MessageDigest
 

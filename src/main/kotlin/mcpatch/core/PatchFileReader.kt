@@ -4,11 +4,10 @@ import mcpatch.data.ModificationMode
 import mcpatch.data.NewFile
 import mcpatch.data.VersionData
 import mcpatch.exception.McPatchManagerException
-import mcpatch.extension.StreamExtension.copyAmountTo
+import mcpatch.classextension.StreamExtension.copyAmountTo
 import mcpatch.stream.ActionedInputStream
 import mcpatch.stream.EmptyInputStream
 import mcpatch.stream.SHA1CheckInputStream
-import mcpatch.utils.File2
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.tools.bzip2.CBZip2InputStream
 import org.json.JSONObject

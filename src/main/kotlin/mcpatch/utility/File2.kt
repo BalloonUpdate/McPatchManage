@@ -1,5 +1,5 @@
 @file:JvmName("File2")
-package mcpatch.utils
+package mcpatch.utility
 
 import java.io.File
 import java.io.FileInputStream

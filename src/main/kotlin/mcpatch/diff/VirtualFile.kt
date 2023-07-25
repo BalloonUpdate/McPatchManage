@@ -2,10 +2,7 @@ package mcpatch.diff
 
 import org.json.JSONArray
 import org.json.JSONObject
-import mcpatch.utils.File2
-import mcpatch.utils.HashUtils
-import mcpatch.utils.PathUtils
-import java.io.InvalidObjectException
+import mcpatch.utility.File2
 
 /**
  * 虚拟文件对象

@@ -1,25 +1,17 @@
-package mcpatch.core
+package mcpatch.menu
 
+import mcpatch.InteractiveExecutor
+import mcpatch.utility.CapturedLogging
 import java.util.*
 import java.util.concurrent.LinkedTransferQueue
 
-object Input
-{
-    private val buf = LinkedTransferQueue<String>()
+abstract class BaseInteractive : InteractiveExecutor.Task() {
+
+
+
+    private val inputBuf = LinkedTransferQueue<String>()
     private val lineBuf = StringBuilder()
 
-    /**
-     * 检查buf内是否有数据
-     */
-    fun hasInput(): Boolean = buf.isNotEmpty()
-
-    /**
-     * 设置buf的初始内容
-     */
-    fun initInput(text: List<String>)
-    {
-        buf.addAll(text)
-    }
 
     /**
      * 从命令行读取一段符合要求的文字输入
@@ -31,21 +23,13 @@ object Input
         while (true)
         {
             read()
-            val input = buf.poll()!!
+            val input = inputBuf.poll()!!
 
             if (reg == null || Regex(reg).matches(input))
                 return Pair(true, input)
 
             return Pair(false, input)
         }
-    }
-
-    /**
-     * 从命令行读取任意一行字符串
-     */
-    fun readAnyString(): String
-    {
-        return readInput(null).second.trim()
     }
 
     /**
@@ -73,7 +57,7 @@ object Input
      */
     private fun read()
     {
-        val block = buf.isEmpty()
+        val block = inputBuf.isEmpty()
 
         if (!block && System.`in`.available() == 0)
             return
@@ -92,7 +76,7 @@ object Input
             {
                 if (lineBuf.isNotEmpty())
                 {
-                    buf.add(lineBuf.toString())
+                    inputBuf.add(lineBuf.toString())
                     lineBuf.clear()
                 }
             } else {
@@ -102,7 +86,7 @@ object Input
 
         if (block)
         {
-            while (buf.isEmpty())
+            while (inputBuf.isEmpty())
                 readOne()
         } else {
             for (i in 0 until System.`in`.available())

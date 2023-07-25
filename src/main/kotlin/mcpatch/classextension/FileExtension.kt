@@ -1,10 +1,6 @@
-package mcpatch.extension
+package mcpatch.classextension
 
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
+import java.io.*
 
 object FileExtension
 {
@@ -19,4 +15,19 @@ object FileExtension
     {
         return FileOutputStream(this).buffered(bufferSize)
     }
+
+    fun File.moveToOverwrite(target: File)
+    {
+        if(!exists())
+            throw FileNotFoundException(path)
+
+        if (target.exists())
+            target.delete()
+
+        target.parentFile.mkdirs()
+
+        if (!renameTo(target))
+            throw RuntimeException("fail to move file from $path to ${target.path}")
+    }
+
 }

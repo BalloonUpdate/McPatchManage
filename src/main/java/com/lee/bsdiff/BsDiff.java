@@ -1,6 +1,6 @@
 package com.lee.bsdiff;
 
-import mcpatch.extension.StreamExtension;
+import mcpatch.classextension.StreamExtension;
 
 import java.io.IOException;
 import java.io.InputStream;

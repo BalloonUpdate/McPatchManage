@@ -1,22 +1,19 @@
-package mcpatch.interactive
+package mcpatch.menu
 
 import mcpatch.McPatchManage
-import mcpatch.core.Input
+import mcpatch.classextension.FileExtension.bufferedOutputStream
 import mcpatch.core.PatchFileReader
 import mcpatch.core.VersionList
 import mcpatch.editor.TextFileEditor
 import mcpatch.exception.McPatchManagerException
-import mcpatch.extension.FileExtension.bufferedOutputStream
-import mcpatch.logging.Log
 import org.apache.commons.compress.archivers.zip.ZipFile
+import java.io.File
 
-class Combine
-{
-    fun execute()
-    {
-        Log.info("即将进行版本合并操作，请输入要合并的版本数量")
+class CombineVersions : BaseInteractive() {
+    override fun run() {
+        log.info("即将进行版本合并操作，请输入要合并的版本数量")
 
-        val input = Input.readInput("\\d+")
+        val input = readInput("\\d+")
 
         if (!input.first)
             throw McPatchManagerException("合并过程中断")
@@ -29,16 +26,16 @@ class Combine
 
         val combined = versions.take(count)
 
-        Log.info("将要合并这些版本 $combined 要继续吗？（输入y或者n）")
-        if (!Input.readYesOrNot(false))
+        log.info("将要合并这些版本 $combined 要继续吗？（输入y或者n）")
+        if (!readYesOrNot(false))
             throw McPatchManagerException("合并过程中断")
 
         McPatchManage.combineDir.delete()
         McPatchManage.combineDir.mkdirs()
 
-        val workspace = McPatchManage.combineDir + "workspace"
-        val history = McPatchManage.combineDir + "history"
-        val public = McPatchManage.combineDir + "public"
+        val workspace = File(McPatchManage.combineDir, "workspace")
+        val history = File(McPatchManage.combineDir, "history")
+        val public = File(McPatchManage.combineDir, "public")
 
         workspace.mkdirs()
         history.mkdirs()
@@ -48,34 +45,34 @@ class Combine
 
         for (version in combined)
         {
-            val patchFile = McPatchManage.publicDir + "$version.mcpatch.zip"
+            val patchFile = File(McPatchManage.publicDir, "$version.mcpatch.zip")
 
-            if (!patchFile.exists)
+            if (!patchFile.exists())
                 throw McPatchManagerException("版本 ${patchFile.path} 的数据文件丢失或者不存在，版本合并失败")
 
-            val reader = PatchFileReader(version, ZipFile(patchFile.file, "utf-8"))
+            val reader = PatchFileReader(version, ZipFile(patchFile, "utf-8"))
 
             changelogList.add(reader.meta.changeLogs)
 
             // 删除旧文件和旧目录，还有创建新目录
-            reader.meta.oldFiles.map { (workspace + it) }.forEach { it.delete() }
-            reader.meta.oldFolders.map { (workspace + it) }.forEach { it.delete() }
-            reader.meta.newFolders.map { (workspace + it) }.forEach { it.mkdirs() }
+            reader.meta.oldFiles.map { File(workspace, it) }.forEach { it.delete() }
+            reader.meta.oldFolders.map { File(workspace, it) }.forEach { it.delete() }
+            reader.meta.newFolders.map { File(workspace, it) }.forEach { it.mkdirs() }
 
             for ((index, entry) in reader.withIndex())
             {
-                Log.info("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.meta.path}")
+                log.info("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.meta.path}")
 
-                val file = workspace + entry.meta.path
+                val file = File(workspace, entry.meta.path)
 
-                file.parent.mkdirs()
+                file.parentFile.mkdirs()
 
-                file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
+                file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
             }
         }
 
-        val versionL = VersionList(public + "versions.txt")
-        val changelogs = TextFileEditor(McPatchManage.workdir + "changelogs.txt")
+        val versionL = VersionList(File(public, "versions.txt"))
+        val changelogs = TextFileEditor(File(McPatchManage.workdir, "changelogs.txt"))
 
         // 生成默认更新记录
         val defaultChangeLogs = changelogList
@@ -86,55 +83,55 @@ class Combine
 
         if (changelogList.isNotEmpty())
         {
-            Log.info("请打开 ${changelogs.file.name} 编辑合并后的更新记录，然后按任意键继续")
+            log.info("请打开 ${changelogs.file.name} 编辑合并后的更新记录，然后按任意键继续")
 
-            Input.readAnyString()
+            readAnyString()
         }
 
-        Log.info("请输入 $combined 版本在合并后新的版本号")
+        log.info("请输入 $combined 版本在合并后新的版本号")
 
         var version: String
 
         while (true)
         {
-            version = Input.readAnyString()
+            version = readAnyString()
 
             if (version.isEmpty())
             {
-                Log.info("版本号不能为空，请重新输入")
+                log.info("版本号不能为空，请重新输入")
                 continue
             }
 
             if (version in McPatchManage.versionList.read().filter { !combined.contains(it) })
             {
-                Log.info("版本号与已有版本号重复，请重新输入")
+                log.info("版本号与已有版本号重复，请重新输入")
                 continue
             }
 
             break
         }
 
-        Create().create(workspace, history, public, true, versionL, changelogs, version)
+        CreateVersion().create(workspace, history, public, true, versionL, changelogs, version)
 
-        Log.info("正在进行收尾工作")
+        log.info("正在进行收尾工作")
 
         // 生成新的版本号列表
         val existings = McPatchManage.versionList.read()
         existings.removeIf { it in combined }
         val ddd = listOf(version) + existings
-        Log.info(ddd)
+        log.info(ddd)
         McPatchManage.versionList.write(ddd)
 
         // 删除合并之前的版本文件
         for (c in combined)
-            (McPatchManage.publicDir + "$c.mcpatch.zip").delete()
+            File(McPatchManage.publicDir, "$c.mcpatch.zip").delete()
 
         // 复制新的版本文件
-        val patchFile = public + "$version.mcpatch.zip"
-        patchFile.copy(McPatchManage.publicDir + patchFile.name)
+        val patchFile = File(public, "$version.mcpatch.zip")
+        patchFile.copyTo(File(McPatchManage.publicDir, patchFile.name))
 
         McPatchManage.combineDir.delete()
 
-        Log.info("版本合并完成: $combined => $version")
+        log.info("版本合并完成: $combined => $version")
     }
 }

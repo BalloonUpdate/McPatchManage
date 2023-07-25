@@ -1,4 +1,4 @@
-package mcpatch.utils
+package mcpatch.utility
 
 object PathUtils
 {

@@ -1,4 +1,4 @@
-package mcpatch.extension
+package mcpatch.classextension
 
 import java.io.InputStream
 import java.io.OutputStream

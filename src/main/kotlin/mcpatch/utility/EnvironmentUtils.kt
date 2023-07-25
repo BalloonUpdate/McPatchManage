@@ -1,4 +1,4 @@
-package mcpatch.utils
+package mcpatch.utility
 
 import java.io.IOException
 import java.net.URLDecoder

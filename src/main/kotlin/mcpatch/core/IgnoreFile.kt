@@ -1,5 +1,5 @@
 package mcpatch.core
 
-import mcpatch.utils.File2
+import java.io.File
 
-class IgnoreFile(file: File2) : AbstractRulingFile(file)
+class IgnoreFile(file: File) : AbstractRulingFile(file)

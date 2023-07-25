@@ -1,15 +1,15 @@
 package mcpatch.core
 
-import mcpatch.utils.File2
+import java.io.File
 
-class VersionList(val file: File2)
+class VersionList(val file: File)
 {
     fun read(): MutableList<String>
     {
-        if (!file.exists)
+        if (!file.exists())
             return mutableListOf()
 
-        return file.content
+        return file.readText()
             .trim()
             .split("\r\n", "\n", "\r")
             .filter { it.isNotEmpty() }
@@ -19,7 +19,7 @@ class VersionList(val file: File2)
 
     fun write(versions: List<String>)
     {
-        file.content = versions.joinToString("\n")
+        file.writeText(versions.joinToString("\n"))
     }
 
     /**

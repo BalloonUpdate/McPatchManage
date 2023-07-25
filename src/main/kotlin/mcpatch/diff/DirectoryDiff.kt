@@ -2,7 +2,7 @@ package mcpatch.diff
 
 import mcpatch.core.IgnoreFile
 import mcpatch.core.OverwriteFile
-import mcpatch.utils.PathUtils
+import mcpatch.utility.PathUtils
 
 /**
  * 目录差异对比

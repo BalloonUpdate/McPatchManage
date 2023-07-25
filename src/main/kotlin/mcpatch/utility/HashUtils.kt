@@ -1,4 +1,4 @@
-package mcpatch.utils
+package mcpatch.utility
 
 import java.io.File
 import java.nio.ByteBuffer

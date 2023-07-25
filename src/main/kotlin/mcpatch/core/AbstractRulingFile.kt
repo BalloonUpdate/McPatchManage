@@ -2,9 +2,9 @@ package mcpatch.core
 
 import com.hrakaroo.glob.GlobPattern
 import com.hrakaroo.glob.MatchingEngine
-import mcpatch.utils.File2
+import java.io.File
 
-abstract class AbstractRulingFile(val file: File2)
+abstract class AbstractRulingFile(val file: File)
 {
     private val globs: MutableList<MatchingEngine> = mutableListOf()
 
@@ -14,7 +14,7 @@ abstract class AbstractRulingFile(val file: File2)
 
     fun reload()
     {
-        val lines = if (file.exists) file.file.readLines().filter { it.trim().isNotEmpty() } else listOf()
+        val lines = if (file.exists()) file.readLines().filter { it.trim().isNotEmpty() } else listOf()
         val compileds = lines.map { GlobPattern.compile(it) }
 
         globs.clear()

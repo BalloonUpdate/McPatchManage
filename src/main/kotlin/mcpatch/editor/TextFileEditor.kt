@@ -1,18 +1,18 @@
 package mcpatch.editor
 
-import mcpatch.utils.File2
+import java.io.File
 
-class TextFileEditor(val file: File2)
+class TextFileEditor(val file: File)
 {
     /**
      * 获取文件内容
      */
     fun get(): String?
     {
-        if (!file.exists)
+        if (!file.exists())
             return null
 
-        val content = file.content
+        val content = file.readText()
 
         if (content.isEmpty())
             return null
@@ -23,17 +23,17 @@ class TextFileEditor(val file: File2)
     fun clear()
     {
         file.delete()
-        file.create()
+        file.createNewFile()
     }
 
     fun create()
     {
-        file.create()
+        file.createNewFile()
     }
 
     fun write(text: String)
     {
-        file.content = text
+        file.writeText(text)
     }
 
     fun delete()
