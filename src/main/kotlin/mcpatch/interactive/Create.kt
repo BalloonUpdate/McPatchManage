@@ -221,6 +221,9 @@ class Create
                 throw McPatchManagerException("创建过程中断")
         }
 
+        Log.info("要对这个版本中的所有变动文件使用强制覆盖吗? 否则沿用 overwrites.txt 文件规则，不知道此选项的功能请选择n（输入y或者n）")
+        val overwritesAll = Input.readYesOrNot(false)
+
         // 创建更新包
         val start = System.currentTimeMillis()
         Log.info("正在创建版本 $version 可能需要一点时间")
@@ -252,7 +255,7 @@ class Create
                         val new = workspaceD + path
                         val newLen = if (new.exists) new.length else 0
                         val oldLen = if (old.exists) old.length else 0
-                        val overwrite = path in overwrites
+                        val overwrite = overwritesAll || path in overwrites
 
                         Log.info("打包文件(${index + 1}/${diff.missingFiles.size}) $path")
 
