@@ -1,0 +1,85 @@
+    private fun filediff(arguments: List<String>, url: URL, contentLength: Long, session: IHTTPSession): Response {
+        val (action, paths) = separateFirst(arguments)
+//        val path = paths.joinToString("/")
+
+        return when (action) {
+            "diff" -> {
+                val workspace = RealFile.CreateFromRealFile(NewMain.workspaceDir)
+                val history = RealFile.CreateFromRealFile(NewMain.historyDir)
+                val diff = DirectoryDiff()
+                diff.compare(history.files, workspace.files, NewMain.ignorefile, true)
+
+                val output = JSONObject()
+
+                output.put("missing-folders", diff.missingFolders)
+                output.put("missing-files", diff.missingFiles)
+                output.put("redundant-folders", diff.redundantFolders)
+                output.put("redundant-files", diff.redundantFiles)
+                output.put("moved-files", diff.moveFiles.map { "${it.first}|${it.second}" })
+
+                ResponseHelper.buildPlainTextResponse(output.toString(4))
+            }
+            else -> ResponseHelper.buildForbiddenResponse("unknown explorer action '$action'")
+        }
+    }
+
+    private fun createVersion(arguments: List<String>, url: URL, contentLength: Long, session: IHTTPSession): Response {
+        val action = arguments.first()
+
+        val state = when (longTimeTaskExecutor.getRunningTaskType()) {
+            null -> "idle"
+            CreateVersion::class.java -> "running"
+            else -> "busy"
+        }
+
+        return when (action) {
+            "check-state" -> {
+                val output = JSONObject()
+
+                output.put("state", state)
+
+                // take out the logs buffered only when this task is running
+                if (state == "running")
+                    output.put("logs", longTimeTaskExecutor.takeLogs())
+
+                ResponseHelper.buildPlainTextResponse(state)
+            }
+            "create-version" -> {
+                if (state != "idle")
+                    return ResponseHelper.buildForbiddenResponse("the executor is not idle now")
+
+                val json = JSONObject(session.inputStream.readBytes().decodeToString())
+                val versionName = json.getString("version")
+                val changeLogs = json.getString("logs")
+
+                // submit the task for creating new version
+                longTimeTaskExecutor.run(CreateVersion(
+                    NewMain.workspaceDir,
+                    NewMain.historyDir,
+                    NewMain.publicDir,
+                    versionName,
+                    changeLogs,
+                    NewMain.versionList,
+                    false,
+                ))
+
+                ResponseHelper.buildPlainTextResponse("success")
+            }
+            else -> ResponseHelper.buildForbiddenResponse("unknown action '$action'")
+        }
+    }
+
+    private fun combineVersions(arguments: List<String>, url: URL, contentLength: Long, session: IHTTPSession): Response {
+        val action = arguments.first()
+
+        val state = when (longTimeTaskExecutor.getRunningTaskType()) {
+            null -> "idle"
+            CreateVersion::class.java -> "running"
+            else -> "busy"
+        }
+
+        TODO()
+//        return when (action) {
+//
+//        }
+    }
