@@ -228,107 +228,113 @@ class Create
         val start = System.currentTimeMillis()
         Log.info("正在创建版本 $version 可能需要一点时间")
 
-        tempPatchFile.file.bufferedOutputStream(8 * 1024 * 1024).use { tempFile2 ->
-            val archive = ZipArchiveOutputStream(tempFile2)
-            archive.encoding = "utf-8"
+        try {
 
-            val meta = VersionData()
 
-            meta.moveFiles.addAll(diff.moveFiles.map { MoveFile(it.first, it.second) })
-            meta.oldFiles.addAll(diff.redundantFiles)
-            meta.oldFolders.addAll(diff.redundantFolders)
-            meta.newFolders.addAll(diff.missingFolders)
-            meta.changeLogs = changelogs.get() ?: ""
+            tempPatchFile.file.bufferedOutputStream(8 * 1024 * 1024).use { tempFile2 ->
+                val archive = ZipArchiveOutputStream(tempFile2)
+                archive.encoding = "utf-8"
 
-            // 写出文件更新数据
-            if (diff.missingFiles.isNotEmpty())
-            {
-                MemoryOutputStream().use { sharedBuf ->
-                    val overwrites = McPatchManage.overwritefile
-                    overwrites.reload()
+                val meta = VersionData()
 
-                    for ((index, path) in diff.missingFiles.withIndex())
-                    {
-                        sharedBuf.reset()
+                meta.moveFiles.addAll(diff.moveFiles.map { MoveFile(it.first, it.second) })
+                meta.oldFiles.addAll(diff.redundantFiles)
+                meta.oldFolders.addAll(diff.redundantFolders)
+                meta.newFolders.addAll(diff.missingFolders)
+                meta.changeLogs = changelogs.get() ?: ""
 
-                        val old = historyD + path
-                        val new = workspaceD + path
-                        val newLen = if (new.exists) new.length else 0
-                        val oldLen = if (old.exists) old.length else 0
-                        val overwrite = overwritesAll || path in overwrites
+                // 写出文件更新数据
+                if (diff.missingFiles.isNotEmpty())
+                {
+                    MemoryOutputStream().use { sharedBuf ->
+                        val overwrites = McPatchManage.overwritefile
+                        overwrites.reload()
 
-                        Log.info("打包文件(${index + 1}/${diff.missingFiles.size}) $path")
+                        for ((index, path) in diff.missingFiles.withIndex())
+                        {
+                            sharedBuf.reset()
 
-                        if (max(newLen, oldLen) > Int.MAX_VALUE.toLong() - 1)
-                            throw McPatchManagerException("暂时不支持打包大小超过2GB的文件： $path")
+                            val old = historyD + path
+                            val new = workspaceD + path
+                            val newLen = if (new.exists) new.length else 0
+                            val oldLen = if (old.exists) old.length else 0
+                            val overwrite = overwritesAll || path in overwrites
 
-                        meta.newFiles.add(packFile(old, new, sharedBuf, archive, path, overwrite))
+                            Log.info("打包文件(${index + 1}/${diff.missingFiles.size}) $path")
+
+                            if (max(newLen, oldLen) > Int.MAX_VALUE.toLong() - 1)
+                                throw McPatchManagerException("暂时不支持打包大小超过2GB的文件： $path")
+
+                            meta.newFiles.add(packFile(old, new, sharedBuf, archive, path, overwrite))
+                        }
                     }
                 }
+
+                // 全量包在安装之前会删除所有跟踪的文件，已达到强制更新的目的
+                if (isFull)
+                    meta.oldFiles.addAll(diff.missingFiles)
+
+                // 写出元数据
+                val bytes = meta.serializeToJson().toString(4).encodeToByteArray()
+                val entry = ZipArchiveEntry(".mcpatch-meta.json")
+                entry.size = bytes.size.toLong()
+                archive.putArchiveEntry(entry)
+                archive.write(bytes)
+                archive.closeArchiveEntry()
+
+                archive.finish()
             }
 
-            // 全量包在安装之前会删除所有跟踪的文件，已达到强制更新的目的
-            if (isFull)
-                meta.oldFiles.addAll(diff.missingFiles)
+            if (tempPatchFile.length > Int.MAX_VALUE)
+                throw McPatchManagerException("版本 $version 的补丁文件超过了2Gb大小的限制，请将文件分多次更新以绕过此限制")
 
-            // 写出元数据
-            val bytes = meta.serializeToJson().toString(4).encodeToByteArray()
-            val entry = ZipArchiveEntry(".mcpatch-meta.json")
-            entry.size = bytes.size.toLong()
-            archive.putArchiveEntry(entry)
-            archive.write(bytes)
-            archive.closeArchiveEntry()
+            Log.info("正在验证 $version 的补丁文件")
 
-            archive.finish()
-        }
-
-        if (tempPatchFile.length > Int.MAX_VALUE)
-            throw McPatchManagerException("版本 $version 的补丁文件超过了2Gb大小的限制，请将文件分多次更新以绕过此限制")
-
-        Log.info("正在验证 $version 的补丁文件")
-
-        // 校验更新包
-        try {
-            PatchFileReader(version, ZipFile(tempPatchFile.file, "utf-8")).use { reader ->
-                val buf = ByteArrayOutputStream()
-                for ((index, entry) in reader.withIndex())
-                {
-                    Log.info("验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.meta.path}")
-                    buf.reset()
-                    entry.copyTo(buf)
+            // 校验更新包
+            try {
+                PatchFileReader(version, ZipFile(tempPatchFile.file, "utf-8")).use { reader ->
+                    val buf = ByteArrayOutputStream()
+                    for ((index, entry) in reader.withIndex())
+                    {
+                        Log.info("验证文件(${index + 1}/${reader.meta.newFiles.size}): ${entry.meta.path}")
+                        buf.reset()
+                        entry.copyTo(buf)
+                    }
                 }
+            } catch (e: McPatchManagerException) {
+                Log.info(e.message!!)
+                throw McPatchManagerException("版本 $version 的补丁文件校验失败")
             }
-        } catch (e: McPatchManagerException) {
-            Log.info(e.message!!)
-            throw McPatchManagerException("版本 $version 的补丁文件校验失败")
+
+            Log.info("补丁文件验证完成")
+
+            if (!skipHistorySync)
+            {
+                // 同步history
+                Log.info("正在同步文件状态，可能需要一点时间")
+                history.syncFrom(diff, workspaceD)
+            } else {
+                Log.info("已跳过文件状态同步")
+            }
+
+            // 合并临时文件
+            tempPatchFile.copy(patchFile)
+            tempPatchFile.delete()
+
+            // 删除更新记录文件
+            changelogs.clear()
+
+            // 更新版本号
+            val versions2 = versionL.read()
+            versions2.add(version)
+            versionL.write(versions2)
+
+            // 输出耗时
+            val elapse = System.currentTimeMillis() - start
+            Log.info("创建版本 $version 完成，耗时 ${elapse.toFloat() / 1000} 秒")
+        } catch (e: OutOfMemoryError) {
+            Log.error("打包时发生错误，因为分配的内存不足导致打包失败。请尝试使用JVM参数 -Xmx8G 来给管理端分配更多可用内存")
         }
-
-        Log.info("补丁文件验证完成")
-
-        if (!skipHistorySync)
-        {
-            // 同步history
-            Log.info("正在同步文件状态，可能需要一点时间")
-            history.syncFrom(diff, workspaceD)
-        } else {
-            Log.info("已跳过文件状态同步")
-        }
-
-        // 合并临时文件
-        tempPatchFile.copy(patchFile)
-        tempPatchFile.delete()
-
-        // 删除更新记录文件
-        changelogs.clear()
-
-        // 更新版本号
-        val versions2 = versionL.read()
-        versions2.add(version)
-        versionL.write(versions2)
-
-        // 输出耗时
-        val elapse = System.currentTimeMillis() - start
-        Log.info("创建版本 $version 完成，耗时 ${elapse.toFloat() / 1000} 秒")
     }
 
     fun execute()
