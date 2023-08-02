@@ -4,6 +4,7 @@ import mcpatch.McPatchManage
 import mcpatch.McPatchManage.historyDir
 import mcpatch.McPatchManage.publicDir
 import mcpatch.McPatchManage.versionList
+import mcpatch.McPatchManage.workspaceDir
 import mcpatch.core.PatchFileReader
 import mcpatch.diff.DirectoryDiff
 import mcpatch.diff.RealFile
@@ -26,6 +27,9 @@ class Revert
 
         if (!mcpatch.core.Input.readYesOrNot(false))
             throw McPatchManagerException("还原过程中断")
+
+        workspaceDir.clear()
+        historyDir.clear()
 
         // 还原history目录
         for (version in versionList.read())
