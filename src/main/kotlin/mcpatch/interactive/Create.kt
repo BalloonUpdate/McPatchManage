@@ -215,14 +215,16 @@ class Create
         Log.info("如果有更新记录请在此时粘贴到 changelogs.txt 文件里")
         Log.info("确定要创建版本 $version 吗? （输入y或者n）")
 
+        var overwritesAll = false
+
         if (versionSpecified == null)
         {
             if (!Input.readYesOrNot(false))
                 throw McPatchManagerException("创建过程中断")
-        }
 
-        Log.info("要对这个版本中的所有变动文件使用强制覆盖吗? 否则沿用 overwrites.txt 文件规则，不知道此选项的功能请选择n（输入y或者n）")
-        val overwritesAll = Input.readYesOrNot(false)
+            Log.info("要对这个版本中的所有变动文件使用强制覆盖吗? 否则沿用 overwrites.txt 文件规则，不知道此选项的功能请选择n（输入y或者n）")
+            overwritesAll = Input.readYesOrNot(false)
+        }
 
         // 创建更新包
         val start = System.currentTimeMillis()
