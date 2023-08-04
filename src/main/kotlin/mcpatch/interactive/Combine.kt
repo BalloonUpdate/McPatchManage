@@ -1,13 +1,17 @@
 package mcpatch.interactive
 
+import com.lee.bsdiff.BsPatch
 import mcpatch.McPatchManage
 import mcpatch.core.Input
 import mcpatch.core.PatchFileReader
 import mcpatch.core.VersionList
+import mcpatch.data.ModificationMode
 import mcpatch.editor.TextFileEditor
 import mcpatch.exception.McPatchManagerException
+import mcpatch.extension.FileExtension.bufferedInputStream
 import mcpatch.extension.FileExtension.bufferedOutputStream
 import mcpatch.logging.Log
+import mcpatch.utils.HashUtils
 import org.apache.commons.compress.archivers.zip.ZipFile
 
 class Combine
@@ -70,7 +74,47 @@ class Combine
 
                 file.parent.mkdirs()
 
-                file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
+                when(entry.mode)
+                {
+                    ModificationMode.Empty -> {
+                        file.delete()
+                        file.create()
+                    }
+
+                    ModificationMode.Fill -> {
+                        // 如果本地文件已经存在，且校验一致，就跳过更新
+                        if (file.exists && HashUtils.sha1(file.file) == entry.meta.newHash)
+                            continue
+
+                        file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
+
+                        if (HashUtils.sha1(file.file) != entry.meta.newHash)
+                            throw RuntimeException("版本 $version 中的文件解压后数据校验不通过 ${entry.meta.path}")
+                    }
+
+                    ModificationMode.Modify -> {
+                        if (!file.exists)
+                            throw RuntimeException("版本 $version 中的文件意外丢失，无法进行修补 ${entry.meta.path}")
+
+                        if (HashUtils.sha1(file.file) != entry.meta.oldHash)
+                            throw RuntimeException("版本 $version 中的文件校验不一致，无法进行修补 ${entry.meta.path}")
+
+                        val temp = file.parent + (file.name + ".tmp")
+
+                        file.file.bufferedInputStream().use { old ->
+                            entry.getInputStream().use { patch ->
+                                temp.file.bufferedOutputStream().use { out ->
+                                    BsPatch().bspatch(old, patch, out, old.available(), entry.meta.rawLength.toInt())
+                                }
+                            }
+                        }
+
+                        if (HashUtils.sha1(temp.file) != entry.meta.newHash)
+                            throw RuntimeException("版本 $version 中的文件修补后数据校验不通过 ${entry.meta.path}")
+
+                        temp.move(file)
+                    }
+                }
             }
         }
 
