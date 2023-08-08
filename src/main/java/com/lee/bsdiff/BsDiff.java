@@ -15,9 +15,8 @@ public class BsDiff {
 		byte[] oldData = new byte[oldDataLength];
 		byte[] newData = new byte[newDataLength];
 //		oldFile.read(oldData);
-//		newFile.read(newData);
-
 		StreamExtension.INSTANCE.actuallyRead(oldFile, oldData, 0, oldDataLength);
+//		newFile.read(newData);
 		StreamExtension.INSTANCE.actuallyRead(newFile, newData, 0, newDataLength);
 
 		SuffixArray suffixArray = new SuffixArray(oldData);

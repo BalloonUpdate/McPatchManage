@@ -1,10 +1,14 @@
 package com.lee.bsdiff;
 
+import mcpatch.extension.StreamExtension;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-// this file is modified from the GitHub repo of SparkInLee: https://github.com/SparkInLee/jbsdiff
+/**
+ * this file is modified from https://github.com/SparkInLee/jbsdiff
+ */
 
 public class BsPatch {
 	private long wrote = 0;
@@ -12,10 +16,12 @@ public class BsPatch {
 	@SuppressWarnings("resource")
 	public long bspatch(InputStream oldFile, InputStream patchFile, OutputStream newFile, int oldFileLength, int patchFileLenth) throws IOException {
 		byte[] oldData = new byte[oldFileLength];
-		oldFile.read(oldData);
+//		oldFile.read(oldData);
+		StreamExtension.INSTANCE.actuallyRead(oldFile, oldData, 0, oldFileLength);
 
 		byte[] patchData = new byte[patchFileLenth];
-		patchFile.read(patchData);
+//		patchFile.read(patchData);
+		StreamExtension.INSTANCE.actuallyRead(patchFile, patchData, 0, patchFileLenth);
 
 		byte[] header = "ENDSLEY/BSDIFF43".getBytes();
 		int pos = 0;
