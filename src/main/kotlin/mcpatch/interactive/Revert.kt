@@ -52,6 +52,8 @@ class Revert
 
                 val file = historyDir + entry.meta.path
 
+                file.parent.mkdirs()
+
                 file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
             }
 
