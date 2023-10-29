@@ -138,7 +138,8 @@ class Create
         skipHistorySync: Boolean,
         versionL: VersionList,
         changelogs: TextFileEditor,
-        versionSpecified: String? = null
+        versionSpecified: String? = null,
+        extraDeleteds: List<String>? = null,
     ) {
         Log.info("正在计算文件修改，可能需要一点时间")
 
@@ -241,6 +242,8 @@ class Create
 
                 meta.moveFiles.addAll(diff.moveFiles.map { MoveFile(it.first, it.second) })
                 meta.oldFiles.addAll(diff.redundantFiles)
+                if (extraDeleteds != null)
+                    meta.oldFiles.addAll(extraDeleteds)
                 meta.oldFolders.addAll(diff.redundantFolders)
                 meta.newFolders.addAll(diff.missingFolders)
                 meta.changeLogs = changelogs.get() ?: ""

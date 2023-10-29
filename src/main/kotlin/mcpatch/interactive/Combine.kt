@@ -50,6 +50,8 @@ class Combine
 
         val changelogList = mutableListOf<String>()
 
+        var deleteds = mutableListOf<String>()
+
         for (version in combined)
         {
             val patchFile = McPatchManage.publicDir + "$version.mcpatch.zip"
@@ -66,9 +68,13 @@ class Combine
             reader.meta.oldFolders.map { (workspace + it) }.forEach { it.delete() }
             reader.meta.newFolders.map { (workspace + it) }.forEach { it.mkdirs() }
 
+            reader.meta.oldFiles.forEach { deleteds.add(it) }
+
             for ((index, entry) in reader.withIndex())
             {
                 Log.info("[$version] 解压(${index + 1}/${reader.meta.newFiles.size}) ${entry.meta.path}")
+
+                reader.meta.oldFiles.forEach { deleteds.remove(it) }
 
                 val file = workspace + entry.meta.path
 
@@ -158,7 +164,7 @@ class Combine
             break
         }
 
-        Create().create(workspace, history, public, true, versionL, changelogs, version)
+        Create().create(workspace, history, public, true, versionL, changelogs, version, deleteds)
 
         Log.info("正在进行收尾工作")
 
