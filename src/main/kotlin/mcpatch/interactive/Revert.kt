@@ -41,10 +41,17 @@ class Revert
 
             val reader = PatchFileReader(version, ZipFile(patchFile.file, "utf-8"))
 
+            println("$version >>")
+
             // 删除旧文件和旧目录，还有创建新目录
             reader.meta.oldFiles.map { (historyDir + it) }.forEach { it.delete() }
-            reader.meta.oldFolders.map { (historyDir + it) }.forEach { it.delete() }
             reader.meta.newFolders.map { (historyDir + it) }.forEach { it.mkdirs() }
+
+            // 移动文件
+            for (move in reader.meta.moveFiles) {
+                (historyDir + move.to).parent.mkdirs()
+                (historyDir + move.from).move(historyDir + move.to)
+            }
 
             for ((index, entry) in reader.withIndex())
             {
@@ -56,6 +63,8 @@ class Revert
 
                 file.file.bufferedOutputStream().use { stream -> entry.copyTo(stream) }
             }
+
+            reader.meta.oldFolders.map { (historyDir + it) }.forEach { it.delete() }
 
             Log.info("[$version] 版本 $version 处理完成")
         }
